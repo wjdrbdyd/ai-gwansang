@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/ai-gwansang.html"
+    }
+  ]
+}
