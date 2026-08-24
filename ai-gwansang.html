@@ -154,12 +154,27 @@
     display: block; font-size: 12px; color: #6a5a3e; margin-bottom: 4px; font-family: 'Nanum Myeongjo', serif; font-weight: 700;
   }
   .field-row input {
-    box-sizing: border-box; width: 100%; height: 42px; padding: 0 10px;
+    box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px;
     border: 1px solid rgba(184,134,47,0.5);
-    border-radius: 5px; font-family: 'Gowun Batang', serif; font-size: 14px;
+    border-radius: 5px; font-family: 'Gowun Batang', serif; font-size: 16px;
     background: #fdf9ee; color: var(--ink);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
     color-scheme: light;
+    -webkit-appearance: none; appearance: none;
+  }
+
+  .ymd-row { display: flex; gap: 6px; }
+  .ymd-row select {
+    box-sizing: border-box; flex: 1; min-height: 44px; padding: 10px 6px;
+    border: 1px solid rgba(184,134,47,0.5);
+    border-radius: 5px; font-family: 'Gowun Batang', serif; font-size: 16px;
+    background: #fdf9ee; color: var(--ink);
+    -webkit-appearance: none; appearance: none;
+    text-align: center;
+  }
+  .ymd-row select:focus {
+    outline: none; border-color: var(--red-seal);
+    box-shadow: 0 0 0 3px rgba(168,50,31,0.12);
   }
   .field-row input:focus {
     outline: none; border-color: var(--red-seal);
@@ -341,7 +356,13 @@
       <div class="optional-toggle" id="optional-toggle">+ 생년월일 추가로 입력하기 (선택, 더 자세히 봐드려요)</div>
       <div class="optional-fields" id="optional-fields">
         <div class="field-row"><label>이름 (선택)</label><input type="text" id="opt-name" placeholder="홍길동"></div>
-        <div class="field-row"><label>생년월일 (선택)</label><input type="date" id="opt-birthdate"></div>
+        <div class="field-row"><label>생년월일 (선택)</label>
+          <div class="ymd-row" id="opt-birthdate-group">
+            <select id="opt-birthdate-y"><option value="">연도</option></select>
+            <select id="opt-birthdate-m"><option value="">월</option></select>
+            <select id="opt-birthdate-d"><option value="">일</option></select>
+          </div>
+        </div>
         <div class="field-row"><label>태어난 시각 (선택)</label><input type="time" id="opt-birthtime"></div>
         <div class="field-row"><label>태어난 장소 (선택)</label><input type="text" id="opt-birthplace" placeholder="서울특별시"></div>
       </div>
@@ -367,7 +388,13 @@
       <div class="person-block">
         <div class="person-title">나</div>
         <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-a" placeholder="이름"></div>
-        <div class="field-row"><label>생년월일</label><input type="date" id="g-birthdate-a"></div>
+        <div class="field-row"><label>생년월일</label>
+          <div class="ymd-row" id="g-birthdate-a-group">
+            <select id="g-birthdate-a-y"><option value="">연도</option></select>
+            <select id="g-birthdate-a-m"><option value="">월</option></select>
+            <select id="g-birthdate-a-d"><option value="">일</option></select>
+          </div>
+        </div>
         <div class="field-row"><label>태어난 시각 (선택)</label><input type="time" id="g-birthtime-a"></div>
       </div>
 
@@ -376,7 +403,13 @@
       <div class="person-block">
         <div class="person-title">상대방</div>
         <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-b" placeholder="이름"></div>
-        <div class="field-row"><label>생년월일</label><input type="date" id="g-birthdate-b"></div>
+        <div class="field-row"><label>생년월일</label>
+          <div class="ymd-row" id="g-birthdate-b-group">
+            <select id="g-birthdate-b-y"><option value="">연도</option></select>
+            <select id="g-birthdate-b-m"><option value="">월</option></select>
+            <select id="g-birthdate-b-d"><option value="">일</option></select>
+          </div>
+        </div>
         <div class="field-row"><label>태어난 시각 (선택)</label><input type="time" id="g-birthtime-b"></div>
       </div>
 
@@ -406,8 +439,9 @@
     <div id="result-view">
       <div class="result-header">
         <img id="result-img" src="" alt="분석된 사진">
+        <div id="result-img-placeholder" style="display:none; font-size:56px; margin-bottom:10px;">🔮</div>
         <div class="result-title" id="result-title">-</div>
-        <div class="result-sub">AI 관상소 감정 결과</div>
+        <div class="result-sub" id="result-sub">AI 관상소 감정 결과</div>
       </div>
       <div id="features-container"></div>
       <div class="fortune-box">
@@ -444,7 +478,77 @@
 </div>
 
 <script>
-// ===================== 화면 전환 관리 =====================
+// ===================== 생년월일 연/월/일 드롭다운 유틸 =====================
+function daysInMonth(year, month) {
+  if (!year || !month) return 31;
+  return new Date(year, month, 0).getDate();
+}
+
+function populateYMDSelect(prefix) {
+  const ySel = document.getElementById(prefix + '-y');
+  const mSel = document.getElementById(prefix + '-m');
+  const dSel = document.getElementById(prefix + '-d');
+  const currentYear = new Date().getFullYear();
+
+  for (let y = currentYear; y >= 1920; y--) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y + '년';
+    ySel.appendChild(opt);
+  }
+  for (let m = 1; m <= 12; m++) {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m + '월';
+    mSel.appendChild(opt);
+  }
+  function refreshDays() {
+    const prevValue = dSel.value;
+    const maxDay = daysInMonth(parseInt(ySel.value), parseInt(mSel.value));
+    dSel.innerHTML = '<option value="">일</option>';
+    for (let d = 1; d <= maxDay; d++) {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d + '일';
+      dSel.appendChild(opt);
+    }
+    if (prevValue && parseInt(prevValue) <= maxDay) dSel.value = prevValue;
+  }
+  refreshDays();
+  ySel.addEventListener('change', refreshDays);
+  mSel.addEventListener('change', refreshDays);
+}
+
+function getYMDValue(prefix) {
+  const y = document.getElementById(prefix + '-y').value;
+  const m = document.getElementById(prefix + '-m').value;
+  const d = document.getElementById(prefix + '-d').value;
+  if (!y || !m || !d) return '';
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function resetYMDValue(prefix) {
+  ['-y', '-m', '-d'].forEach(suffix => {
+    document.getElementById(prefix + suffix).value = '';
+  });
+}
+
+['opt-birthdate', 'g-birthdate-a', 'g-birthdate-b'].forEach(populateYMDSelect);
+
+// ===================== 결과 공유용 인코딩 유틸 (서버 저장 없이 URL에 결과를 담음) =====================
+function encodeShareData(obj) {
+  const json = JSON.stringify(obj);
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decodeShareData(str) {
+  let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  const json = decodeURIComponent(escape(atob(b64)));
+  return JSON.parse(json);
+}
+
+
 const VIEWS = ['home-view', 'gwansang-upload-view', 'gunghap-form-view', 'loading-view', 'result-view', 'couple-result-view'];
 function showView(id) {
   VIEWS.forEach(v => {
@@ -468,6 +572,32 @@ document.querySelectorAll('[data-back="home"]').forEach(el => {
 });
 
 showView('home-view');
+
+// ===================== 공유된 링크로 접속한 경우, 해당 결과를 바로 표시 =====================
+(function initFromSharedLink() {
+  const params = new URLSearchParams(window.location.search);
+  try {
+    if (params.has('r')) {
+      const data = decodeShareData(params.get('r'));
+      showResult({
+        title: data.t,
+        features: (data.f || []).map(x => ({ part: x.p, emoji: x.e, text: x.x })),
+        fortune_score: data.s,
+        fortune_text: data.ft
+      }, true);
+    } else if (params.has('c')) {
+      const data = decodeShareData(params.get('c'));
+      showCoupleResult({
+        title: data.t,
+        features: (data.f || []).map(x => ({ part: x.p, emoji: x.e, text: x.x })),
+        compatibility_score: data.s,
+        summary: data.sm
+      }, { name: data.pa }, { name: data.pb });
+    }
+  } catch (err) {
+    // 링크가 손상된 경우 조용히 홈 화면 유지
+  }
+})();
 
 // ===================== 관상(1인, 사진) =====================
 const dropZone = document.getElementById('drop-zone');
@@ -545,7 +675,7 @@ analyzeBtn.addEventListener('click', async () => {
 
   const optionalInfo = {
     name: document.getElementById('opt-name').value.trim(),
-    birthdate: document.getElementById('opt-birthdate').value,
+    birthdate: getYMDValue('opt-birthdate'),
     birthtime: document.getElementById('opt-birthtime').value,
     birthplace: document.getElementById('opt-birthplace').value.trim()
   };
@@ -574,7 +704,7 @@ document.getElementById('share-btn').addEventListener('click', async () => {
   const shareData = {
     title: 'AI 관상소',
     text: document.getElementById('result-title').textContent + ' - 내 관상 결과는? 🔮',
-    url: window.location.href
+    url: currentGwansangShareUrl
   };
   try {
     if (navigator.share) await navigator.share(shareData);
@@ -586,6 +716,7 @@ document.getElementById('share-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('retry-btn').addEventListener('click', () => {
+  history.replaceState(null, '', window.location.pathname);
   dropZone.style.display = 'block';
   previewWrap.classList.remove('show');
   fileInput.value = '';
@@ -593,7 +724,8 @@ document.getElementById('retry-btn').addEventListener('click', () => {
   analyzeBtn.disabled = true;
   document.getElementById('optional-fields').classList.remove('show');
   document.getElementById('consent-gwansang').checked = false;
-  ['opt-name', 'opt-birthdate', 'opt-birthtime', 'opt-birthplace'].forEach(id => document.getElementById(id).value = '');
+  ['opt-name', 'opt-birthtime', 'opt-birthplace'].forEach(id => document.getElementById(id).value = '');
+  resetYMDValue('opt-birthdate');
   showView('gwansang-upload-view');
 });
 
@@ -618,8 +750,31 @@ async function analyzeFace(base64, mediaType, optionalInfo) {
   return await response.json();
 }
 
-function showResult(result) {
-  document.getElementById('result-img').src = previewImg.src;
+let currentGwansangShareUrl = window.location.href;
+
+function showResult(result, sharedFromLink) {
+  if (sharedFromLink) {
+    document.getElementById('result-img').style.display = 'none';
+    document.getElementById('result-img-placeholder').style.display = 'block';
+    document.getElementById('result-sub').textContent = 'AI 관상소 감정 결과 (공유된 링크 · 원본 사진은 포함되지 않습니다)';
+  } else {
+    document.getElementById('result-img').style.display = '';
+    document.getElementById('result-img-placeholder').style.display = 'none';
+    document.getElementById('result-sub').textContent = 'AI 관상소 감정 결과';
+    document.getElementById('result-img').src = previewImg.src;
+
+    // 공유 링크에는 원본 사진을 담지 않음 (용량 문제 + 사진 자체는 공유 안 하는 게 원칙)
+    const shareData = {
+      t: result.title || '',
+      f: (result.features || []).map(x => ({ p: x.part, e: x.emoji, x: x.text })),
+      s: result.fortune_score || '',
+      ft: result.fortune_text || ''
+    };
+    const url = new URL(window.location.href.split('?')[0]);
+    url.searchParams.set('r', encodeShareData(shareData));
+    currentGwansangShareUrl = url.toString();
+  }
+
   document.getElementById('result-title').textContent = result.title || '알 수 없는 관상';
   document.getElementById('fortune-score').textContent = result.fortune_score || '-';
   document.getElementById('fortune-text').textContent = result.fortune_text || '';
@@ -646,12 +801,12 @@ const gA = { name: '', birthdate: '', birthtime: '' };
 const gB = { name: '', birthdate: '', birthtime: '' };
 
 function checkGunghapReady() {
-  const bdA = document.getElementById('g-birthdate-a').value;
-  const bdB = document.getElementById('g-birthdate-b').value;
+  const bdA = getYMDValue('g-birthdate-a');
+  const bdB = getYMDValue('g-birthdate-b');
   const consented = document.getElementById('consent-gunghap').checked;
   analyzeCoupleBtn.disabled = !(bdA && bdB && consented);
 }
-['g-birthdate-a', 'g-birthdate-b'].forEach(id => {
+['g-birthdate-a-y', 'g-birthdate-a-m', 'g-birthdate-a-d', 'g-birthdate-b-y', 'g-birthdate-b-m', 'g-birthdate-b-d'].forEach(id => {
   document.getElementById(id).addEventListener('change', checkGunghapReady);
 });
 document.getElementById('consent-gunghap').addEventListener('change', checkGunghapReady);
@@ -659,12 +814,12 @@ document.getElementById('consent-gunghap').addEventListener('change', checkGungh
 analyzeCoupleBtn.addEventListener('click', async () => {
   const personA = {
     name: document.getElementById('g-name-a').value.trim() || '나',
-    birthdate: document.getElementById('g-birthdate-a').value,
+    birthdate: getYMDValue('g-birthdate-a'),
     birthtime: document.getElementById('g-birthtime-a').value
   };
   const personB = {
     name: document.getElementById('g-name-b').value.trim() || '상대방',
-    birthdate: document.getElementById('g-birthdate-b').value,
+    birthdate: getYMDValue('g-birthdate-b'),
     birthtime: document.getElementById('g-birthtime-b').value
   };
   if (!personA.birthdate || !personB.birthdate) return;
@@ -693,7 +848,7 @@ document.getElementById('couple-share-btn').addEventListener('click', async () =
   const shareData = {
     title: 'AI 관상소',
     text: document.getElementById('couple-result-title').textContent + ' - 우리 사주 궁합은? 💕',
-    url: window.location.href
+    url: currentGunghapShareUrl
   };
   try {
     if (navigator.share) await navigator.share(shareData);
@@ -705,7 +860,10 @@ document.getElementById('couple-share-btn').addEventListener('click', async () =
 });
 
 document.getElementById('couple-retry-btn').addEventListener('click', () => {
-  ['g-name-a', 'g-birthdate-a', 'g-birthtime-a', 'g-name-b', 'g-birthdate-b', 'g-birthtime-b'].forEach(id => document.getElementById(id).value = '');
+  history.replaceState(null, '', window.location.pathname);
+  ['g-name-a', 'g-birthtime-a', 'g-name-b', 'g-birthtime-b'].forEach(id => document.getElementById(id).value = '');
+  resetYMDValue('g-birthdate-a');
+  resetYMDValue('g-birthdate-b');
   document.getElementById('consent-gunghap').checked = false;
   analyzeCoupleBtn.disabled = true;
   showView('gunghap-form-view');
@@ -729,11 +887,24 @@ async function analyzeCompatibility(personA, personB) {
   return await response.json();
 }
 
+let currentGunghapShareUrl = window.location.href;
+
 function showCoupleResult(result, personA, personB) {
   document.getElementById('couple-result-names').textContent = `${personA.name} 💕 ${personB.name}`;
   document.getElementById('couple-result-title').textContent = result.title || '알 수 없는 궁합';
   document.getElementById('couple-score').textContent = result.compatibility_score || '-';
   document.getElementById('couple-summary').textContent = result.summary || '';
+
+  const shareData = {
+    pa: personA.name, pb: personB.name,
+    t: result.title || '',
+    f: (result.features || []).map(x => ({ p: x.part, e: x.emoji, x: x.text })),
+    s: result.compatibility_score || '',
+    sm: result.summary || ''
+  };
+  const url = new URL(window.location.href.split('?')[0]);
+  url.searchParams.set('c', encodeShareData(shareData));
+  currentGunghapShareUrl = url.toString();
 
   const container = document.getElementById('couple-features-container');
   container.innerHTML = '';
