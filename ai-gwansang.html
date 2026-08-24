@@ -194,6 +194,19 @@
 
   .disclaimer { font-size: 11px; color: #9a8760; margin-top: 18px; line-height: 1.6; text-align: center; }
 
+  .consent-row {
+    display: flex; align-items: flex-start; gap: 8px;
+    margin-top: 16px; padding: 12px 14px; border-radius: 6px;
+    background: rgba(255,255,255,0.3); border: 1px solid rgba(184,134,47,0.3);
+  }
+  .consent-row input[type="checkbox"] {
+    margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0;
+    accent-color: var(--red-seal); cursor: pointer;
+  }
+  .consent-row label {
+    font-size: 12px; color: #6a5a3e; line-height: 1.6; cursor: pointer;
+  }
+
   #loading-view { display: none; text-align: center; padding: 30px 0; }
   #loading-view.show { display: block; }
   .seal-spin {
@@ -333,6 +346,11 @@
         <div class="field-row"><label>태어난 장소 (선택)</label><input type="text" id="opt-birthplace" placeholder="서울특별시"></div>
       </div>
 
+      <div class="consent-row">
+        <input type="checkbox" id="consent-gwansang">
+        <label for="consent-gwansang">업로드한 사진과 입력 정보가 AI 분석을 위해 미국 소재 서버(Anthropic, Google)로 전송되며, 무료 등급 이용 시 Google이 이 데이터를 자사 서비스 개선(AI 학습 포함)에 활용할 수 있음에 동의합니다.</label>
+      </div>
+
       <button class="btn" id="analyze-btn" disabled>관 상 보 기</button>
 
       <div class="disclaimer">
@@ -360,6 +378,11 @@
         <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-b" placeholder="이름"></div>
         <div class="field-row"><label>생년월일</label><input type="date" id="g-birthdate-b"></div>
         <div class="field-row"><label>태어난 시각 (선택)</label><input type="time" id="g-birthtime-b"></div>
+      </div>
+
+      <div class="consent-row">
+        <input type="checkbox" id="consent-gunghap">
+        <label for="consent-gunghap">입력한 두 사람의 이름과 생년월일 정보가 AI 분석을 위해 미국 소재 서버(Anthropic, Google)로 전송되며, 무료 등급 이용 시 Google이 이 데이터를 자사 서비스 개선(AI 학습 포함)에 활용할 수 있음에 동의합니다.</label>
       </div>
 
       <button class="btn" id="analyze-couple-btn" disabled style="margin-top:16px;">궁 합 보 기</button>
@@ -480,6 +503,10 @@ fileInput.addEventListener('change', (e) => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
+function checkGwansangReady() {
+  analyzeBtn.disabled = !(base64Image && document.getElementById('consent-gwansang').checked);
+}
+
 function handleFile(file) {
   if (!file.type.startsWith('image/')) return;
   mediaType = file.type;
@@ -489,10 +516,12 @@ function handleFile(file) {
     base64Image = e.target.result.split(',')[1];
     dropZone.style.display = 'none';
     previewWrap.classList.add('show');
-    analyzeBtn.disabled = false;
+    checkGwansangReady();
   };
   reader.readAsDataURL(file);
 }
+
+document.getElementById('consent-gwansang').addEventListener('change', checkGwansangReady);
 
 document.getElementById('change-photo-link').addEventListener('click', () => {
   dropZone.style.display = 'block';
@@ -563,6 +592,7 @@ document.getElementById('retry-btn').addEventListener('click', () => {
   base64Image = null;
   analyzeBtn.disabled = true;
   document.getElementById('optional-fields').classList.remove('show');
+  document.getElementById('consent-gwansang').checked = false;
   ['opt-name', 'opt-birthdate', 'opt-birthtime', 'opt-birthplace'].forEach(id => document.getElementById(id).value = '');
   showView('gwansang-upload-view');
 });
@@ -618,11 +648,13 @@ const gB = { name: '', birthdate: '', birthtime: '' };
 function checkGunghapReady() {
   const bdA = document.getElementById('g-birthdate-a').value;
   const bdB = document.getElementById('g-birthdate-b').value;
-  analyzeCoupleBtn.disabled = !(bdA && bdB);
+  const consented = document.getElementById('consent-gunghap').checked;
+  analyzeCoupleBtn.disabled = !(bdA && bdB && consented);
 }
 ['g-birthdate-a', 'g-birthdate-b'].forEach(id => {
   document.getElementById(id).addEventListener('change', checkGunghapReady);
 });
+document.getElementById('consent-gunghap').addEventListener('change', checkGunghapReady);
 
 analyzeCoupleBtn.addEventListener('click', async () => {
   const personA = {
@@ -674,6 +706,7 @@ document.getElementById('couple-share-btn').addEventListener('click', async () =
 
 document.getElementById('couple-retry-btn').addEventListener('click', () => {
   ['g-name-a', 'g-birthdate-a', 'g-birthtime-a', 'g-name-b', 'g-birthdate-b', 'g-birthtime-b'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('consent-gunghap').checked = false;
   analyzeCoupleBtn.disabled = true;
   showView('gunghap-form-view');
 });
