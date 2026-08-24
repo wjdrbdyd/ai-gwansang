@@ -16,6 +16,9 @@
 <meta name="twitter:image" content="https://ai-gwansang-one.vercel.app/og-image.png">
 <!-- 실제 배포 시 YOUR-DOMAIN-HERE를 실제 도메인으로, og-image.png는 1200x630px 정도 썸네일 이미지로 교체 필요 -->
 
+<!-- 결과 공유 링크를 짧게 만들기 위한 압축 라이브러리 (서버 저장 없이 URL에 데이터를 담기 위함) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Gowun+Batang:wght@400;700&display=swap');
 
@@ -153,7 +156,7 @@
   .field-row label {
     display: block; font-size: 12px; color: #6a5a3e; margin-bottom: 4px; font-family: 'Nanum Myeongjo', serif; font-weight: 700;
   }
-  .field-row input {
+  .field-row input, .field-row select {
     box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px;
     border: 1px solid rgba(184,134,47,0.5);
     border-radius: 5px; font-family: 'Gowun Batang', serif; font-size: 16px;
@@ -176,7 +179,7 @@
     outline: none; border-color: var(--red-seal);
     box-shadow: 0 0 0 3px rgba(168,50,31,0.12);
   }
-  .field-row input:focus {
+  .field-row input:focus, .field-row select:focus {
     outline: none; border-color: var(--red-seal);
     box-shadow: 0 0 0 3px rgba(168,50,31,0.12);
   }
@@ -363,7 +366,7 @@
             <select id="opt-birthdate-d"><option value="">일</option></select>
           </div>
         </div>
-        <div class="field-row"><label>태어난 시각 (선택)</label><input type="time" id="opt-birthtime"></div>
+        <div class="field-row"><label>태어난 시각 (선택)</label><select id="opt-birthtime"></select></div>
         <div class="field-row"><label>태어난 장소 (선택)</label><input type="text" id="opt-birthplace" placeholder="서울특별시"></div>
       </div>
 
@@ -395,7 +398,7 @@
             <select id="g-birthdate-a-d"><option value="">일</option></select>
           </div>
         </div>
-        <div class="field-row"><label>태어난 시각 (선택)</label><input type="time" id="g-birthtime-a"></div>
+        <div class="field-row"><label>태어난 시각 (선택)</label><select id="g-birthtime-a"></select></div>
       </div>
 
       <div class="heart-divider">💕</div>
@@ -410,7 +413,7 @@
             <select id="g-birthdate-b-d"><option value="">일</option></select>
           </div>
         </div>
-        <div class="field-row"><label>태어난 시각 (선택)</label><input type="time" id="g-birthtime-b"></div>
+        <div class="field-row"><label>태어난 시각 (선택)</label><select id="g-birthtime-b"></select></div>
       </div>
 
       <div class="consent-row">
@@ -535,19 +538,42 @@ function resetYMDValue(prefix) {
 
 ['opt-birthdate', 'g-birthdate-a', 'g-birthdate-b'].forEach(populateYMDSelect);
 
-// ===================== 결과 공유용 인코딩 유틸 (서버 저장 없이 URL에 결과를 담음) =====================
+// ===================== 태어난 시각(십이시진) 드롭다운 유틸 =====================
+const SIJIN_OPTIONS = [
+  '자시 (23시~01시)', '축시 (01시~03시)', '인시 (03시~05시)', '묘시 (05시~07시)',
+  '진시 (07시~09시)', '사시 (09시~11시)', '오시 (11시~13시)', '미시 (13시~15시)',
+  '신시 (15시~17시)', '유시 (17시~19시)', '술시 (19시~21시)', '해시 (21시~23시)'
+];
+function populateSijinSelect(id) {
+  const sel = document.getElementById(id);
+  const blank = document.createElement('option');
+  blank.value = '';
+  blank.textContent = '모름 / 선택 안 함';
+  sel.appendChild(blank);
+  SIJIN_OPTIONS.forEach(label => {
+    const opt = document.createElement('option');
+    opt.value = label;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
+['opt-birthtime', 'g-birthtime-a', 'g-birthtime-b'].forEach(populateSijinSelect);
+
+// ===================== 결과 공유용 인코딩 유틸 (서버 저장 없이 URL에 결과를 담음, LZ 압축으로 링크 길이 최소화) =====================
 function encodeShareData(obj) {
   const json = JSON.stringify(obj);
-  const b64 = btoa(unescape(encodeURIComponent(json)));
-  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return LZString.compressToEncodedURIComponent(json);
 }
 function decodeShareData(str) {
-  let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
-  while (b64.length % 4) b64 += '=';
-  const json = decodeURIComponent(escape(atob(b64)));
+  const json = LZString.decompressFromEncodedURIComponent(str);
+  if (!json) throw new Error('공유 데이터를 해석할 수 없습니다');
   return JSON.parse(json);
 }
 
+// IIFE(initFromSharedLink)가 아래에서 곧바로 showResult/showCoupleResult를 호출할 수 있어서,
+// 그 함수들이 참조하는 아래 두 변수는 반드시 그 호출 이전에 선언되어 있어야 함(TDZ 에러 방지)
+let currentGwansangShareUrl = window.location.href;
+let currentGunghapShareUrl = window.location.href;
 
 const VIEWS = ['home-view', 'gwansang-upload-view', 'gunghap-form-view', 'loading-view', 'result-view', 'couple-result-view'];
 function showView(id) {
@@ -701,11 +727,7 @@ analyzeBtn.addEventListener('click', async () => {
 });
 
 document.getElementById('share-btn').addEventListener('click', async () => {
-  const shareData = {
-    title: 'AI 관상소',
-    text: document.getElementById('result-title').textContent + ' - 내 관상 결과는? 🔮',
-    url: currentGwansangShareUrl
-  };
+  const shareData = { url: currentGwansangShareUrl };
   try {
     if (navigator.share) await navigator.share(shareData);
     else {
@@ -749,8 +771,6 @@ async function analyzeFace(base64, mediaType, optionalInfo) {
   }
   return await response.json();
 }
-
-let currentGwansangShareUrl = window.location.href;
 
 function showResult(result, sharedFromLink) {
   if (sharedFromLink) {
@@ -845,11 +865,7 @@ analyzeCoupleBtn.addEventListener('click', async () => {
 });
 
 document.getElementById('couple-share-btn').addEventListener('click', async () => {
-  const shareData = {
-    title: 'AI 관상소',
-    text: document.getElementById('couple-result-title').textContent + ' - 우리 사주 궁합은? 💕',
-    url: currentGunghapShareUrl
-  };
+  const shareData = { url: currentGunghapShareUrl };
   try {
     if (navigator.share) await navigator.share(shareData);
     else {
@@ -886,8 +902,6 @@ async function analyzeCompatibility(personA, personB) {
   }
   return await response.json();
 }
-
-let currentGunghapShareUrl = window.location.href;
 
 function showCoupleResult(result, personA, personB) {
   document.getElementById('couple-result-names').textContent = `${personA.name} 💕 ${personB.name}`;
