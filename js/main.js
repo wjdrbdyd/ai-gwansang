@@ -117,8 +117,16 @@ window.addEventListener('popstate', (e) => {
 // ============================================================
 // 공유된 링크로 접속한 경우, 결과를 바로 표시 (요청사항 #2 연계:
 // 이 경우에도 상단바로 홈 이동 + 결과 화면 하단 스위치 칩으로 다른 기능 이동 가능)
+//
+// [2026-08-26 버그 수정] 해시(#u=...) 방식으로 바꾼 뒤, "이미 같은 탭에서 이 사이트가
+// 열려있는 상태에서 해시만 다른 링크로 이동"하는 경우(주소창에 붙여넣기, 카톡
+// 인앱 브라우저가 기존 웹뷰를 재사용하는 경우 등) 브라우저가 "같은 문서 내
+// 이동(same-document navigation)"으로 처리해서 페이지를 새로 안 불러오고, 그 결과
+// 우리 스크립트도 재실행이 안 돼서 결과가 아예 안 보이는 문제가 있었음.
+// hashchange 이벤트를 별도로 감지해서 그 경우에도 다시 파싱/렌더링하도록
+// 함수를 재사용 가능한 형태로 분리함.
 // ============================================================
-(function initFromSharedLink() {
+function checkSharedLinkAndRender() {
   // 해시(#r=...) 우선 확인 (신규 방식). 구버전에 뿌려진 링크(?r=...)도 하위호환으로 계속 읽어줌.
   const rawHash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
   const hashParams = new URLSearchParams(rawHash);
@@ -154,7 +162,10 @@ window.addEventListener('popstate', (e) => {
   } catch (err) {
     // 링크가 손상됐거나(구버전 링크 등) 해석 불가하면 조용히 홈 화면 유지
   }
-})();
+}
+
+checkSharedLinkAndRender();
+window.addEventListener('hashchange', checkSharedLinkAndRender);
 
 // ============================================================
 // 결과 화면 공용: 공유 URL 상태 + 하단 액션(공유/다시하기/처음으로/기능전환)
