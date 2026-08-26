@@ -1,0 +1,384 @@
+/* ============================================================
+   AI 관상소 — "홀로그램 포춘카드" 디자인 시스템
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+
+:root {
+  /* --- 컬러 토큰 --- */
+  --bg-deep: #0e0a1f;
+  --bg-mid: #1a1240;
+  --bg-glow-a: #3a1f6b;
+  --bg-glow-b: #4a1240;
+
+  --holo-1: #8b5cf6; /* violet */
+  --holo-2: #f472b6; /* pink */
+  --holo-3: #fbbf24; /* amber */
+  --holo-4: #34d9c5; /* mint */
+
+  --surface: rgba(255, 255, 255, 0.055);
+  --surface-hi: rgba(255, 255, 255, 0.09);
+  --border-soft: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.22);
+
+  --text-hi: #f6f2ff;
+  --text-lo: #ad9fd1;
+  --text-faint: #7c6ea3;
+
+  --cta-grad: linear-gradient(135deg, #ff4fa3 0%, #a855f7 55%, #7c3aed 100%);
+  --holo-grad: conic-gradient(from 0deg, var(--holo-1), var(--holo-2), var(--holo-3), var(--holo-4), var(--holo-1));
+
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  --shadow-deep: 0 30px 70px rgba(0, 0, 0, 0.55);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 90% 60% at 15% -10%, var(--bg-glow-a) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 55% at 110% 15%, var(--bg-glow-b) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 120%, #1f0f52 0%, transparent 55%),
+    var(--bg-deep);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  color: var(--text-hi);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 0 48px;
+  overflow-x: hidden;
+}
+
+.stage { width: 100%; max-width: 480px; }
+
+/* ---- 상단 고정 네비게이션 (홈 이동용, 요청사항 #2) ---- */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(14, 10, 31, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-soft);
+}
+.topbar-brand {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none;
+  font-family: 'Do Hyeon', sans-serif;
+  font-size: 17px; letter-spacing: 0.5px; color: var(--text-hi);
+}
+.topbar-brand:focus-visible, .topbar-home:focus-visible { outline: 2px solid var(--holo-2); outline-offset: 3px; border-radius: 6px; }
+.topbar-orb {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--holo-grad);
+  animation: spin 6s linear infinite;
+  flex-shrink: 0;
+}
+.topbar-home {
+  font-size: 12px; color: var(--text-lo); cursor: pointer;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border-soft);
+  background: var(--surface); transition: all 0.15s ease;
+}
+.topbar-home:hover { color: var(--text-hi); border-color: var(--border-strong); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.content-pad { padding: 26px 18px 0; }
+
+/* ---- 히어로 ---- */
+.hero { text-align: center; margin-bottom: 26px; }
+.hero-badge {
+  display: inline-block; font-size: 11px; letter-spacing: 3px;
+  color: var(--holo-3); margin-bottom: 12px; opacity: 0.9;
+  font-weight: 600;
+}
+.hero h1 {
+  font-family: 'Do Hyeon', sans-serif; font-size: 34px; margin: 0 0 10px;
+  background: linear-gradient(90deg, #ffffff 10%, var(--holo-2) 60%, var(--holo-3) 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  letter-spacing: 0.5px;
+}
+.hero p { color: var(--text-lo); font-size: 13.5px; margin: 0; line-height: 1.6; }
+
+/* ---- 카드 공통 ---- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 22px 18px;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-deep);
+  position: relative;
+  margin: 0 18px 18px;
+}
+
+/* ---- 홈: 메뉴 카드 3개 ---- */
+.nav-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 16px; border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--nav-accent, var(--holo-1));
+  cursor: pointer; transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  margin-bottom: 12px;
+}
+.nav-card:last-child { margin-bottom: 0; }
+.nav-card:hover, .nav-card:focus-visible {
+  transform: translateY(-2px);
+  background: var(--surface-hi);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.35), 0 0 0 1px var(--nav-accent, var(--holo-1)) inset;
+}
+.nav-card:focus-visible { outline: none; }
+.nav-icon {
+  font-size: 24px; width: 48px; height: 48px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--nav-accent, var(--holo-1)) 22%, transparent);
+}
+.nav-text-title { font-family: 'Do Hyeon', sans-serif; font-size: 16px; color: var(--text-hi); letter-spacing: 0.3px; }
+.nav-text-sub { font-size: 12.5px; color: var(--text-lo); margin-top: 3px; }
+.nav-arrow { margin-left: auto; color: var(--text-faint); font-size: 18px; }
+
+/* ---- 공통 뒤로가기 / 타이틀 ---- */
+.back-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12.5px; color: var(--text-lo); cursor: pointer; margin-bottom: 14px;
+  transition: color 0.15s ease;
+}
+.back-link:hover { color: var(--holo-2); }
+
+.view-title {
+  font-family: 'Do Hyeon', sans-serif; font-size: 21px;
+  color: var(--text-hi); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+}
+.view-subtitle { font-size: 12.5px; color: var(--text-lo); margin-bottom: 18px; }
+
+/* ---- 사진 업로드 ---- */
+.drop-zone {
+  border: 2px dashed var(--border-strong); border-radius: var(--radius-md);
+  padding: 32px 16px; cursor: pointer; transition: all 0.2s ease;
+  background: rgba(255,255,255,0.03); text-align: center;
+}
+.drop-zone:hover, .drop-zone.dragover { background: var(--surface-hi); border-color: var(--holo-2); }
+.drop-zone .icon { font-size: 36px; display: block; margin-bottom: 10px; }
+.drop-zone .main-txt { font-family: 'Do Hyeon', sans-serif; font-size: 16px; color: var(--text-hi); }
+.drop-zone .sub-txt { font-size: 12.5px; color: var(--text-lo); margin-top: 6px; }
+
+input[type="file"] { display: none; }
+
+.preview-wrap { margin-top: 18px; display: none; text-align: center; }
+.preview-wrap.show { display: block; }
+#preview-img {
+  max-width: 190px; max-height: 190px; border-radius: 14px;
+  border: 2px solid transparent;
+  background: linear-gradient(var(--bg-mid), var(--bg-mid)) padding-box, var(--holo-grad) border-box;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+}
+.change-photo-link { font-size: 12px; color: var(--holo-2); text-decoration: underline; cursor: pointer; margin-top: 10px; }
+
+/* ---- 선택 입력 토글 ---- */
+.optional-toggle {
+  text-align: center; margin-top: 16px; font-size: 12.5px; color: var(--holo-2);
+  cursor: pointer; text-decoration: underline;
+}
+.optional-fields {
+  display: none; margin-top: 12px; padding: 14px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.035); border: 1px dashed var(--border-soft);
+}
+.optional-fields.show { display: block; }
+
+.field-row { margin-bottom: 10px; }
+.field-row:last-child { margin-bottom: 0; }
+.field-row label {
+  display: block; font-size: 11.5px; color: var(--text-lo); margin-bottom: 5px; font-weight: 600;
+}
+.field-row input, .field-row select {
+  box-sizing: border-box; width: 100%; min-height: 46px; padding: 10px 12px;
+  border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+  font-family: 'Pretendard', sans-serif; font-size: 16px;
+  background: rgba(255,255,255,0.045); color: var(--text-hi);
+  -webkit-appearance: none; appearance: none; color-scheme: dark;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field-row input::placeholder { color: var(--text-faint); }
+
+.ymd-row { display: flex; gap: 6px; }
+.ymd-row select {
+  box-sizing: border-box; flex: 1; min-height: 46px; padding: 10px 4px;
+  border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+  font-family: 'Pretendard', sans-serif; font-size: 16px;
+  background: rgba(255,255,255,0.045); color: var(--text-hi);
+  -webkit-appearance: none; appearance: none; text-align: center; color-scheme: dark;
+}
+.ymd-row select option, .field-row select option { color: #1a1240; }
+
+.field-row input:focus, .field-row select:focus, .ymd-row select:focus {
+  outline: none; border-color: var(--holo-2);
+  box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.18);
+}
+
+/* ---- 사주 궁합 2인 폼 ---- */
+.person-block {
+  padding: 14px 16px; border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.035);
+  border: 1px solid var(--border-soft); margin-bottom: 10px;
+}
+.person-block .person-title {
+  font-family: 'Do Hyeon', sans-serif; font-size: 14px;
+  color: var(--holo-2); margin-bottom: 8px;
+}
+.heart-divider { text-align: center; font-size: 18px; margin: -2px 0 6px; }
+
+/* ---- 버튼 ---- */
+.btn {
+  font-family: 'Do Hyeon', sans-serif; font-size: 17px; letter-spacing: 2px;
+  padding: 15px 36px; border-radius: 999px; border: none; cursor: pointer;
+  background: var(--cta-grad);
+  color: #fff; box-shadow: 0 10px 26px rgba(168, 85, 247, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  margin-top: 20px; display: block; width: 100%;
+}
+.btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(255, 79, 163, 0.4); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+.btn:focus-visible { outline: 2px solid var(--holo-3); outline-offset: 3px; }
+
+.btn-outline {
+  font-family: 'Pretendard', sans-serif; font-weight: 600; font-size: 14px;
+  padding: 13px; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 1.5px solid var(--border-strong); color: var(--text-hi);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  width: 100%;
+}
+.btn-outline:hover { background: var(--surface-hi); border-color: var(--holo-2); }
+.btn-outline:focus-visible { outline: 2px solid var(--holo-3); outline-offset: 2px; }
+
+.disclaimer { font-size: 10.5px; color: var(--text-faint); margin-top: 16px; line-height: 1.7; text-align: center; }
+
+.consent-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.035); border: 1px solid var(--border-soft);
+}
+.consent-row input[type="checkbox"] {
+  margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0;
+  accent-color: var(--holo-2); cursor: pointer;
+}
+.consent-row label { font-size: 11.5px; color: var(--text-lo); line-height: 1.6; cursor: pointer; }
+
+/* ---- 로딩 ---- */
+#loading-view { display: none; text-align: center; padding: 50px 0 30px; }
+#loading-view.show { display: block; }
+.holo-spinner {
+  width: 68px; height: 68px; margin: 0 auto 20px; border-radius: 50%;
+  background: var(--holo-grad);
+  display: flex; align-items: center; justify-content: center;
+  animation: spin 1.6s linear infinite;
+  box-shadow: 0 0 34px rgba(139, 92, 246, 0.55);
+}
+.holo-spinner::after {
+  content: ''; width: 50px; height: 50px; border-radius: 50%;
+  background: var(--bg-mid);
+}
+.loading-txt { font-family: 'Do Hyeon', sans-serif; font-size: 15px; color: var(--text-hi); min-height: 22px; }
+
+/* ---- 결과 화면 (관상/궁합/오늘의 운세 공통) ---- */
+#result-view { display: none; }
+#result-view.show { display: block; }
+
+.result-header { text-align: center; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px dashed var(--border-soft); }
+#result-img {
+  width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
+  border: 2px solid transparent;
+  background: linear-gradient(var(--bg-mid), var(--bg-mid)) padding-box, var(--holo-grad) border-box;
+  margin-bottom: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+#result-img-placeholder { font-size: 52px; margin-bottom: 10px; align-items: center; justify-content: center; }
+.result-names { font-family: 'Do Hyeon', sans-serif; font-size: 15px; color: var(--text-lo); margin-bottom: 8px; }
+.result-title { font-family: 'Do Hyeon', sans-serif; font-size: 23px; color: var(--text-hi); margin: 4px 0; }
+.result-sub { font-size: 12.5px; color: var(--text-lo); }
+
+.feature-block {
+  margin-bottom: 14px; padding: 14px 16px;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm); border-left: 3px solid var(--f-accent, var(--holo-1));
+}
+.feature-label {
+  font-family: 'Do Hyeon', sans-serif; font-size: 14.5px; color: var(--text-hi);
+  margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
+}
+.feature-text { font-size: 14px; line-height: 1.7; color: var(--text-lo); }
+
+.fortune-box {
+  margin-top: 18px; padding: 22px 18px; text-align: center;
+  background: linear-gradient(155deg, rgba(139,92,246,0.14), rgba(244,114,182,0.10));
+  border-radius: var(--radius-md); border: 1px solid var(--border-soft); position: relative; overflow: hidden;
+}
+.fortune-box .sticker {
+  position: absolute; top: -16px; right: -10px; width: 52px; height: 52px;
+  border-radius: 12px; transform: rotate(10deg);
+  background: var(--holo-grad);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--bg-deep); font-size: 10px; font-weight: 800; font-family: 'Do Hyeon', sans-serif;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+.fortune-box .label { font-size: 11px; color: var(--text-lo); letter-spacing: 3px; margin-bottom: 8px; }
+.fortune-box .score {
+  font-family: 'Do Hyeon', sans-serif; font-size: 32px; margin-bottom: 8px;
+  background: linear-gradient(90deg, var(--holo-3), var(--holo-2));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.fortune-box .fortune-text { font-size: 13.5px; line-height: 1.75; color: var(--text-hi); }
+
+.share-btn {
+  display: block; width: 100%; margin-top: 12px;
+  background: var(--cta-grad); border: none; color: #fff;
+  font-family: 'Do Hyeon', sans-serif; font-size: 15px; padding: 14px;
+  border-radius: 999px; cursor: pointer; letter-spacing: 1px;
+  box-shadow: 0 10px 24px rgba(168, 85, 247, 0.35);
+  transition: transform 0.15s ease;
+}
+.share-btn:hover { transform: translateY(-1px); }
+.share-btn:focus-visible { outline: 2px solid var(--holo-3); outline-offset: 3px; }
+
+/* ---- 다른 기능 바로가기 칩 (요청사항 #2) ---- */
+.switch-row { display: flex; gap: 8px; margin-top: 14px; }
+.switch-chip {
+  flex: 1; text-align: center; padding: 11px 6px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border-soft);
+  font-size: 12px; color: var(--text-lo); cursor: pointer;
+  transition: all 0.15s ease;
+}
+.switch-chip:hover { color: var(--text-hi); border-color: var(--holo-2); background: var(--surface-hi); }
+.switch-chip:focus-visible { outline: 2px solid var(--holo-3); outline-offset: 2px; }
+
+.retry-row { display: flex; gap: 8px; margin-top: 10px; }
+.retry-row .btn-outline { margin-top: 0; }
+
+.final-disclaimer { text-align: center; font-size: 10.5px; color: var(--text-faint); margin-top: 16px; line-height: 1.7; }
+
+.error-box { display: none; text-align: center; padding: 16px; margin: 0 18px 14px; color: var(--holo-2); font-size: 13.5px; }
+.error-box.show { display: block; }
+
+.ad-slot {
+  width: 100%; max-width: 468px; height: 54px; margin: 0 auto 4px;
+  background: rgba(255,255,255,0.03); border: 1px dashed var(--border-soft); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-size: 10.5px; letter-spacing: 2px;
+}
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-orb, .holo-spinner { animation: none; }
+  .nav-card, .share-btn, .btn { transition: none; }
+}

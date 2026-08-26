@@ -1,14 +1,16 @@
 // ============================================================
 // api/analyze.js — Vercel Serverless Function
-// 관상(이미지 기반) + 사주 궁합(생년월일 기반) 라우팅
+// 관상(이미지 기반) + 사주 궁합(생년월일 2인) + 오늘의 운세(생년월일 1인) 라우팅
 // Gemini 우선 호출, 실패 시에만 Claude로 자동 폴백
 // ============================================================
 // 필요 환경변수:
 //   ANTHROPIC_API_KEY - console.anthropic.com
 //   GEMINI_API_KEY    - aistudio.google.com/apikey
 //
-// 요청 body: { type: 'gwansang', base64Image, mediaType, optionalInfo? }
-//         또는 { type: 'gunghap', personA: {name, birthdate, birthtime}, personB: {...} }
+// 요청 body:
+//   { type: 'gwansang', base64Image, mediaType, optionalInfo? }
+//   { type: 'gunghap',  personA: {name, birthdate, birthtime}, personB: {...} }
+//   { type: 'unse',     person: {name, birthdate, birthtime} }
 // ============================================================
 
 // import { kv } from '@vercel/kv'; // 하루 카운터 정확히 세려면 연결 권장
@@ -54,6 +56,25 @@ const GUNGHAP_SYSTEM_PROMPT = `너는 전통 사주명리가 컨셉의 유머러
   "summary": "종합 궁합평 2~3문장"
 }`;
 
+const UNSE_SYSTEM_PROMPT = `너는 전통 사주명리가 컨셉의 유머러스한 캐릭터야. 한 사람의 생년월일(및 태어난 시각, 있는 경우)과 오늘 날짜를 바탕으로, 실제 사주명리학 개념(오행, 십이지 띠, 일진 등)에 빗대어 "오늘 하루"의 운세를 재미있게 풀이해.
+규칙:
+- 절대 진지한 예측이나 실제 미래 진단으로 오해되지 않게, 항상 과장되고 유쾌한 톤 유지 (오락 목적의 창작임을 전제)
+- 오행(목화토금수), 십이지 띠, 일진 같은 실제 사주 개념을 그럴듯하게 활용
+- 총운은 항상 좋게만 몰아가지 말고, 과장된 행운·귀엽고 웃긴 소소한 불운·엉뚱한 반전 등을 예측 불가능하게 섞어서 작성
+- "불운"도 귀엽고 웃긴 소소한 해프닝 수준으로만 — 외모 평가, 성격 비하, 진짜 기분 상할 수 있는 표현은 절대 금지. 나이/인종/성별 추측도 금지
+- 반드시 아래 JSON 형식으로만 응답 (다른 텍스트 없이, 코드블록 마크다운 없이):
+{
+  "title": "오늘 이 사람의 하루를 한마디로 표현하는 재밌는 별명",
+  "features": [
+    {"part": "총운", "emoji": "이모지", "text": "재밌는 풀이 2문장 내외"},
+    {"part": "재물운", "emoji": "이모지", "text": "재밌는 풀이 2문장 내외"},
+    {"part": "연애운", "emoji": "이모지", "text": "재밌는 풀이 2문장 내외"},
+    {"part": "행운 아이템", "emoji": "이모지", "text": "오늘의 행운 아이템/컬러와 이유 2문장 내외"}
+  ],
+  "fortune_score": "0~100 사이 숫자 + '점'",
+  "fortune_text": "오늘의 총평 2~3문장"
+}`;
+
 function parseJsonLoose(text) {
   return JSON.parse(text.trim().replace(/```json|```/g, '').trim());
 }
@@ -72,6 +93,27 @@ function buildGunghapUserText(personA, personB) {
 이 두 사람의 사주 궁합을 재미있게 봐줘. JSON으로만 답해.`;
 }
 
+function buildUnseUserText(person) {
+  const today = new Date().toLocaleDateString('ko-KR', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+  });
+  return `오늘 날짜(한국 기준): ${today}
+이 사람의 정보: 이름=${person.name || '미상'}, 생년월일=${person.birthdate}, 태어난시각=${person.birthtime || '미상'}
+이 사람의 오늘 하루 운세를 재미있게 봐줘. JSON으로만 답해.`;
+}
+
+function systemPromptFor(type) {
+  if (type === 'gwansang') return GWANSANG_SYSTEM_PROMPT;
+  if (type === 'gunghap') return GUNGHAP_SYSTEM_PROMPT;
+  return UNSE_SYSTEM_PROMPT;
+}
+
+function userTextFor(payload) {
+  if (payload.type === 'gwansang') return buildGwansangUserText(payload.optionalInfo);
+  if (payload.type === 'gunghap') return buildGunghapUserText(payload.personA, payload.personB);
+  return buildUnseUserText(payload.person);
+}
+
 // ---------------- Claude 호출 ----------------
 async function callClaude(payload) {
   const messages = payload.type === 'gwansang'
@@ -79,10 +121,10 @@ async function callClaude(payload) {
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: payload.mediaType, data: payload.base64Image } },
-          { type: 'text', text: buildGwansangUserText(payload.optionalInfo) }
+          { type: 'text', text: userTextFor(payload) }
         ]
       }]
-    : [{ role: 'user', content: buildGunghapUserText(payload.personA, payload.personB) }];
+    : [{ role: 'user', content: userTextFor(payload) }];
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -94,7 +136,7 @@ async function callClaude(payload) {
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1000,
-      system: payload.type === 'gwansang' ? GWANSANG_SYSTEM_PROMPT : GUNGHAP_SYSTEM_PROMPT,
+      system: systemPromptFor(payload.type),
       messages
     })
   });
@@ -114,15 +156,15 @@ async function callGemini(payload) {
   const parts = payload.type === 'gwansang'
     ? [
         { inline_data: { mime_type: payload.mediaType, data: payload.base64Image } },
-        { text: buildGwansangUserText(payload.optionalInfo) }
+        { text: userTextFor(payload) }
       ]
-    : [{ text: buildGunghapUserText(payload.personA, payload.personB) }];
+    : [{ text: userTextFor(payload) }];
 
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: payload.type === 'gwansang' ? GWANSANG_SYSTEM_PROMPT : GUNGHAP_SYSTEM_PROMPT }] },
+      system_instruction: { parts: [{ text: systemPromptFor(payload.type) }] },
       contents: [{ role: 'user', parts }],
       generationConfig: { response_mime_type: 'application/json' }
     })
@@ -151,14 +193,17 @@ export default async function handler(req, res) {
   }
 
   const payload = req.body || {};
+  if (!['gwansang', 'gunghap', 'unse'].includes(payload.type)) {
+    return res.status(400).json({ error: '알 수 없는 요청 타입입니다' });
+  }
   if (payload.type === 'gwansang' && (!payload.base64Image || !payload.mediaType)) {
     return res.status(400).json({ error: '이미지 데이터가 없습니다' });
   }
   if (payload.type === 'gunghap' && (!payload.personA?.birthdate || !payload.personB?.birthdate)) {
     return res.status(400).json({ error: '생년월일 정보가 없습니다' });
   }
-  if (!['gwansang', 'gunghap'].includes(payload.type)) {
-    return res.status(400).json({ error: '알 수 없는 요청 타입입니다' });
+  if (payload.type === 'unse' && !payload.person?.birthdate) {
+    return res.status(400).json({ error: '생년월일 정보가 없습니다' });
   }
 
   try {

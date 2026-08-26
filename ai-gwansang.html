@@ -3,977 +3,244 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 관상소 - 관상과 사주 궁합을 재미로</title>
+<title>AI 관상소 - 관상 · 사주 궁합 · 오늘의 운세</title>
 
-<meta property="og:title" content="AI 관상소 - 관상 & 사주 궁합">
-<meta property="og:description" content="사진 한 장으로 관상을, 생년월일로 사주 궁합을 AI가 재미있게 봐드립니다 🔮">
+<meta property="og:title" content="AI 관상소 - 관상 · 사주 궁합 · 오늘의 운세">
+<meta property="og:description" content="사진 한 장으로 관상을, 생년월일로 사주 궁합과 오늘의 운세를 AI가 재미있게 봐드립니다 🔮">
 <meta property="og:image" content="https://ai-gwansang-one.vercel.app/og-image.png">
 <meta property="og:url" content="https://ai-gwansang-one.vercel.app">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="AI 관상소 - 관상 & 사주 궁합">
-<meta name="twitter:description" content="사진 한 장으로 관상을, 생년월일로 사주 궁합을 AI가 재미있게 봐드립니다 🔮">
+<meta name="twitter:title" content="AI 관상소 - 관상 · 사주 궁합 · 오늘의 운세">
+<meta name="twitter:description" content="사진 한 장으로 관상을, 생년월일로 사주 궁합과 오늘의 운세를 AI가 재미있게 봐드립니다 🔮">
 <meta name="twitter:image" content="https://ai-gwansang-one.vercel.app/og-image.png">
-<!-- 실제 배포 시 YOUR-DOMAIN-HERE를 실제 도메인으로, og-image.png는 1200x630px 정도 썸네일 이미지로 교체 필요 -->
 
-<!-- 결과 공유 링크를 짧게 만들기 위한 압축 라이브러리 (서버 저장 없이 URL에 데이터를 담기 위함) -->
+<link rel="stylesheet" href="styles.css">
+
+<!-- 결과 공유 링크 압축 (서버 저장 없이 URL에 결과를 담기 위함) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 
-<!-- 카카오톡 인앱 브라우저에서도 정식 공유 카드를 띄우기 위한 SDK -->
-<!-- 사용 전 반드시 아래 두 가지를 해야 함:
-     1) developers.kakao.com 에서 앱 생성(무료) → [앱] > [플랫폼 키] > [JavaScript 키] 복사
-     2) [앱] > [플랫폼] > [Web]에 실제 배포 도메인(예: https://ai-gwansang-one.vercel.app) 등록
-     그 다음 아래 'YOUR_KAKAO_JS_KEY' 부분을 발급받은 JavaScript 키로 교체할 것 -->
+<!-- 카카오톡 인앱 브라우저에서도 정식 공유 카드를 띄우기 위한 SDK.
+     사용 전: 1) developers.kakao.com 앱 생성(무료) → JavaScript 키 발급
+              2) 플랫폼 > Web에 배포 도메인 등록
+              3) 아래 YOUR_KAKAO_JS_KEY를 발급받은 키로 교체 -->
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
 <script>
   if (window.Kakao && !Kakao.isInitialized()) {
     Kakao.init('YOUR_KAKAO_JS_KEY');
   }
 </script>
-
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Gowun+Batang:wght@400;700&display=swap');
-
-  :root {
-    --ink: #1c1410;
-    --paper: #f2e6c9;
-    --paper-dark: #e6d4a8;
-    --red-seal: #a8321f;
-    --red-seal-dark: #7a2216;
-    --gold: #b8862f;
-    --gold-light: #d4a94f;
-    --shadow: rgba(28, 20, 16, 0.35);
-  }
-
-  * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    min-height: 100vh;
-    background: radial-gradient(ellipse at top, #2a1f16 0%, #14100b 60%, #0a0806 100%);
-    font-family: 'Gowun Batang', serif;
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 16px;
-    overflow-x: hidden;
-  }
-
-  .stage { width: 100%; max-width: 520px; }
-
-  .ad-slot {
-    width: 100%; max-width: 468px; height: 60px; margin: 0 auto 18px;
-    background: rgba(255,255,255,0.04);
-    border: 1px dashed rgba(184,134,47,0.35);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    color: #7a6a4a; font-size: 11px; letter-spacing: 2px;
-  }
-
-  .signboard { text-align: center; margin-bottom: 28px; }
-  .signboard .eyebrow { color: var(--gold-light); font-size: 13px; letter-spacing: 6px; margin-bottom: 10px; opacity: 0.8; }
-  .signboard h1 {
-    font-family: 'Nanum Myeongjo', serif; font-weight: 800; font-size: 40px;
-    color: #f5ead0; margin: 0 0 8px;
-    text-shadow: 0 2px 20px rgba(212, 169, 79, 0.3); letter-spacing: 2px;
-  }
-  .signboard p { color: #a89572; font-size: 14px; margin: 0; letter-spacing: 1px; }
-
-  .scroll {
-    background: var(--paper);
-    background-image:
-      repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(184,134,47,0.06) 39px),
-      linear-gradient(135deg, var(--paper) 0%, var(--paper-dark) 100%);
-    border-radius: 4px; padding: 36px 28px;
-    box-shadow: 0 30px 60px var(--shadow), 0 0 0 1px rgba(184,134,47,0.3), inset 0 0 60px rgba(122, 34, 22, 0.04);
-    position: relative;
-  }
-  .scroll::before, .scroll::after {
-    content: ''; position: absolute; left: 0; right: 0; height: 14px;
-    background: linear-gradient(180deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
-  }
-  .scroll::before { top: -7px; border-radius: 3px; }
-  .scroll::after { bottom: -7px; border-radius: 3px; }
-
-  /* ---- 홈 화면: 메뉴 카드 ---- */
-  .nav-card {
-    display: flex; align-items: center; gap: 16px;
-    padding: 20px; border-radius: 8px;
-    border: 1px solid rgba(184,134,47,0.4);
-    background: rgba(255,255,255,0.25);
-    cursor: pointer; transition: all 0.2s ease;
-    margin-bottom: 14px;
-  }
-  .nav-card:hover { background: rgba(184,134,47,0.15); transform: translateY(-2px); box-shadow: 0 8px 20px var(--shadow); }
-  .nav-card .nav-icon {
-    font-size: 32px; width: 56px; height: 56px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, var(--gold), var(--gold-light));
-    border-radius: 50%;
-  }
-  .nav-card .nav-text-title {
-    font-family: 'Nanum Myeongjo', serif; font-weight: 700; font-size: 18px; color: var(--ink);
-  }
-  .nav-card .nav-text-sub { font-size: 13px; color: #6a5a3e; margin-top: 3px; }
-
-  /* ---- 공통 뒤로가기 ---- */
-  .back-link {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 13px; color: #7a6a4a; cursor: pointer; margin-bottom: 16px;
-  }
-  .back-link:hover { color: var(--red-seal); }
-
-  .view-title {
-    font-family: 'Nanum Myeongjo', serif; font-weight: 800; font-size: 20px;
-    color: var(--red-seal); text-align: center; margin-bottom: 6px;
-  }
-  .view-subtitle {
-    text-align: center; font-size: 12px; color: #8a7a58; margin-bottom: 16px;
-  }
-
-  .drop-zone {
-    border: 2px dashed var(--gold); border-radius: 8px; padding: 36px 16px;
-    cursor: pointer; transition: all 0.25s ease;
-    background: rgba(184, 134, 47, 0.05); position: relative; text-align: center;
-  }
-  .drop-zone:hover, .drop-zone.dragover { background: rgba(184, 134, 47, 0.12); border-color: var(--red-seal); }
-  .drop-zone .icon { font-size: 40px; display: block; margin-bottom: 10px; }
-  .drop-zone .main-txt { font-family: 'Nanum Myeongjo', serif; font-weight: 700; font-size: 17px; color: var(--ink); }
-  .drop-zone .sub-txt { font-size: 13px; color: #7a6a4a; margin-top: 6px; }
-
-  input[type="file"] { display: none; }
-
-  .preview-wrap { margin-top: 20px; display: none; text-align: center; }
-  .preview-wrap.show { display: block; }
-  #preview-img {
-    max-width: 200px; max-height: 200px; border-radius: 6px;
-    border: 3px solid var(--gold); box-shadow: 0 8px 20px var(--shadow);
-  }
-  .change-photo-link { font-size: 12px; color: var(--red-seal); text-decoration: underline; cursor: pointer; margin-top: 8px; }
-  .change-photo-link:hover { opacity: 0.75; }
-
-  /* ---- 선택 입력 토글(관상 화면) ---- */
-  .optional-toggle {
-    text-align: center; margin-top: 18px; font-size: 13px; color: var(--red-seal);
-    cursor: pointer; text-decoration: underline;
-  }
-  .optional-fields {
-    display: none; margin-top: 14px; padding: 16px; border-radius: 6px;
-    background: rgba(255,255,255,0.3); border: 1px dashed var(--gold);
-  }
-  .optional-fields.show { display: block; }
-  .field-row { margin-bottom: 10px; }
-  .field-row:last-child { margin-bottom: 0; }
-  .field-row label {
-    display: block; font-size: 12px; color: #6a5a3e; margin-bottom: 4px; font-family: 'Nanum Myeongjo', serif; font-weight: 700;
-  }
-  .field-row input, .field-row select {
-    box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px;
-    border: 1px solid rgba(184,134,47,0.5);
-    border-radius: 5px; font-family: 'Gowun Batang', serif; font-size: 16px;
-    background: #fdf9ee; color: var(--ink);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    color-scheme: light;
-    -webkit-appearance: none; appearance: none;
-  }
-
-  .ymd-row { display: flex; gap: 6px; }
-  .ymd-row select {
-    box-sizing: border-box; flex: 1; min-height: 44px; padding: 10px 6px;
-    border: 1px solid rgba(184,134,47,0.5);
-    border-radius: 5px; font-family: 'Gowun Batang', serif; font-size: 16px;
-    background: #fdf9ee; color: var(--ink);
-    -webkit-appearance: none; appearance: none;
-    text-align: center;
-  }
-  .ymd-row select:focus {
-    outline: none; border-color: var(--red-seal);
-    box-shadow: 0 0 0 3px rgba(168,50,31,0.12);
-  }
-  .field-row input:focus, .field-row select:focus {
-    outline: none; border-color: var(--red-seal);
-    box-shadow: 0 0 0 3px rgba(168,50,31,0.12);
-  }
-  .field-row input::-webkit-calendar-picker-indicator {
-    filter: invert(28%) sepia(45%) saturate(1200%) hue-rotate(1deg) brightness(85%);
-    cursor: pointer;
-  }
-
-  /* ---- 사주 궁합 폼 ---- */
-  .person-block {
-    padding: 14px 16px; border-radius: 6px; background: rgba(255,255,255,0.3);
-    border: 1px solid rgba(184,134,47,0.35); margin-bottom: 10px;
-  }
-  .person-block .person-title {
-    font-family: 'Nanum Myeongjo', serif; font-weight: 700; font-size: 14px;
-    color: var(--red-seal); margin-bottom: 8px;
-  }
-  .heart-divider { text-align: center; font-size: 18px; color: var(--red-seal); margin: -2px 0 6px; }
-
-  .btn {
-    font-family: 'Nanum Myeongjo', serif; font-weight: 700; font-size: 17px; letter-spacing: 4px;
-    padding: 14px 36px; border-radius: 4px; border: none; cursor: pointer;
-    background: linear-gradient(135deg, var(--red-seal), var(--red-seal-dark));
-    color: #f5ead0; box-shadow: 0 6px 16px rgba(122,34,22,0.4);
-    transition: transform 0.15s ease, box-shadow 0.15s ease; margin-top: 22px;
-    display: block; width: 100%;
-  }
-  .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(122,34,22,0.5); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .disclaimer { font-size: 11px; color: #9a8760; margin-top: 18px; line-height: 1.6; text-align: center; }
-
-  .consent-row {
-    display: flex; align-items: flex-start; gap: 8px;
-    margin-top: 16px; padding: 12px 14px; border-radius: 6px;
-    background: rgba(255,255,255,0.3); border: 1px solid rgba(184,134,47,0.3);
-  }
-  .consent-row input[type="checkbox"] {
-    margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0;
-    accent-color: var(--red-seal); cursor: pointer;
-  }
-  .consent-row label {
-    font-size: 12px; color: #6a5a3e; line-height: 1.6; cursor: pointer;
-  }
-
-  #loading-view { display: none; text-align: center; padding: 30px 0; }
-  #loading-view.show { display: block; }
-  .seal-spin {
-    width: 70px; height: 70px; margin: 0 auto 18px; border-radius: 50%;
-    background: radial-gradient(circle, var(--red-seal) 0%, var(--red-seal-dark) 100%);
-    display: flex; align-items: center; justify-content: center;
-    color: #f5ead0; font-size: 28px; font-family: 'Nanum Myeongjo', serif; font-weight: 800;
-    animation: pulse-seal 1.4s ease-in-out infinite; box-shadow: 0 8px 24px rgba(122,34,22,0.5);
-  }
-  @keyframes pulse-seal {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.08); opacity: 0.85; }
-  }
-  .loading-txt { font-family: 'Nanum Myeongjo', serif; font-size: 16px; color: var(--ink); min-height: 24px; }
-
-  #result-view, #couple-result-view { display: none; }
-  #result-view.show, #couple-result-view.show { display: block; }
-
-  .result-header { text-align: center; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px dashed var(--gold); }
-  #result-img {
-    width: 84px; height: 84px; border-radius: 50%; object-fit: cover;
-    border: 3px solid var(--gold); margin-bottom: 10px; box-shadow: 0 6px 14px var(--shadow);
-  }
-  .couple-result-names {
-    font-family: 'Nanum Myeongjo', serif; font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: 8px;
-  }
-  .result-title { font-family: 'Nanum Myeongjo', serif; font-weight: 800; font-size: 22px; color: var(--red-seal); margin: 4px 0; }
-  .result-sub { font-size: 13px; color: #7a6a4a; }
-
-  .feature-block {
-    margin-bottom: 16px; padding: 14px 16px; background: rgba(255,255,255,0.35);
-    border-radius: 6px; border-left: 3px solid var(--gold);
-  }
-  .feature-label {
-    font-family: 'Nanum Myeongjo', serif; font-weight: 700; font-size: 14px; color: var(--red-seal);
-    margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
-  }
-  .feature-text { font-size: 14.5px; line-height: 1.7; color: var(--ink); }
-
-  .fortune-box {
-    margin-top: 20px; padding: 20px; text-align: center;
-    background: linear-gradient(135deg, rgba(122,34,22,0.08), rgba(184,134,47,0.1));
-    border-radius: 8px; border: 1px solid var(--gold); position: relative;
-  }
-  .fortune-box .stamp {
-    position: absolute; top: -14px; right: -8px; width: 46px; height: 46px;
-    background: var(--red-seal); border-radius: 4px; transform: rotate(8deg);
-    display: flex; align-items: center; justify-content: center;
-    color: #f5ead0; font-size: 12px; font-weight: 800; font-family: 'Nanum Myeongjo', serif;
-    box-shadow: 0 4px 10px var(--shadow);
-  }
-  .fortune-box .label { font-size: 12px; color: #7a6a4a; letter-spacing: 3px; margin-bottom: 8px; }
-  .fortune-box .score { font-family: 'Nanum Myeongjo', serif; font-weight: 800; font-size: 30px; color: var(--red-seal); margin-bottom: 6px; }
-  .fortune-box .fortune-text { font-size: 14px; line-height: 1.7; color: var(--ink); }
-
-  .share-btn {
-    display: block; width: 100%; margin-top: 10px;
-    background: linear-gradient(135deg, #3a2d1c, #241a10);
-    border: 1px solid var(--gold); color: #f5ead0;
-    font-family: 'Gowun Batang', serif; font-size: 14px; padding: 12px;
-    border-radius: 4px; cursor: pointer; letter-spacing: 2px; transition: transform 0.15s ease;
-  }
-  .share-btn:hover { transform: translateY(-1px); }
-
-  .retry-btn {
-    display: block; width: 100%; margin-top: 22px; background: transparent;
-    border: 1.5px solid var(--gold); color: var(--ink); font-family: 'Gowun Batang', serif;
-    font-size: 14px; padding: 12px; border-radius: 4px; cursor: pointer;
-    letter-spacing: 2px; transition: background 0.2s ease;
-  }
-  .retry-btn:hover { background: rgba(184,134,47,0.1); }
-
-  .final-disclaimer { text-align: center; font-size: 11px; color: #7a6a4a; margin-top: 16px; line-height: 1.6; }
-
-  .error-box { display: none; text-align: center; padding: 20px; color: var(--red-seal); font-size: 14px; }
-  .error-box.show { display: block; }
-
-  @media (max-width: 480px) {
-    .signboard h1 { font-size: 30px; }
-    .scroll { padding: 26px 18px; }
-  }
-</style>
 </head>
 <body>
 
 <div class="stage">
-  <div class="ad-slot">광고 영역 (배포 후 AdSense 심사 통과 시 표시)</div>
 
-  <div class="signboard">
-    <div class="eyebrow">AI 觀 相 所</div>
-    <h1>AI 관상소</h1>
-    <p>관상과 사주 궁합을 재미로 봐드립니다</p>
+  <div class="topbar">
+    <div class="topbar-brand" id="topbar-brand" role="button" tabindex="0" aria-label="처음으로">
+      <span class="topbar-orb" aria-hidden="true"></span>AI 관상소
+    </div>
   </div>
 
-  <div class="scroll">
+  <div class="ad-slot">광고 영역 (배포 후 AdSense 심사 통과 시 표시)</div>
 
-    <!-- ============ 홈 화면 ============ -->
-    <div id="home-view">
-      <div class="nav-card" id="nav-gwansang">
-        <div class="nav-icon">🔮</div>
-        <div>
-          <div class="nav-text-title">관상 보기</div>
-          <div class="nav-text-sub">사진 한 장으로 오늘의 운세를</div>
+  <div class="content-pad">
+    <div class="panel">
+
+      <!-- ============ 홈 화면 ============ -->
+      <div id="home-view">
+        <div class="hero">
+          <div class="hero-badge">✦ AI 포춘 리딩 ✦</div>
+          <h1>AI 관상소</h1>
+          <p>사진 한 장, 생년월일 하나로<br>오늘의 나를 확인해보세요</p>
         </div>
-      </div>
-      <div class="nav-card" id="nav-gunghap">
-        <div class="nav-icon">💕</div>
-        <div>
-          <div class="nav-text-title">사주 궁합 보기</div>
-          <div class="nav-text-sub">생년월일로 두 사람의 궁합을</div>
-        </div>
-      </div>
-    </div>
 
-    <!-- ============ 관상 업로드 화면 ============ -->
-    <div id="gwansang-upload-view" style="display:none;">
-      <div class="back-link" data-back="home">← 처음으로</div>
-      <div class="view-title" style="margin-bottom: 18px;">🔮 관상 보기</div>
-
-      <div class="drop-zone" id="drop-zone">
-        <span class="icon">🖼️</span>
-        <div class="main-txt">얼굴 사진을 올려주세요</div>
-        <div class="sub-txt">클릭하거나 파일을 끌어다 놓으세요</div>
-      </div>
-      <input type="file" id="file-input" accept="image/*">
-
-      <div class="preview-wrap" id="preview-wrap">
-        <img id="preview-img" src="" alt="미리보기">
-        <div class="change-photo-link" id="change-photo-link">다른 사진 선택</div>
-      </div>
-
-      <div class="optional-toggle" id="optional-toggle">+ 생년월일 추가로 입력하기 (선택, 더 자세히 봐드려요)</div>
-      <div class="optional-fields" id="optional-fields">
-        <div class="field-row"><label>이름 (선택)</label><input type="text" id="opt-name" placeholder="홍길동"></div>
-        <div class="field-row"><label>생년월일 (선택)</label>
-          <div class="ymd-row" id="opt-birthdate-group">
-            <select id="opt-birthdate-y"><option value="">연도</option></select>
-            <select id="opt-birthdate-m"><option value="">월</option></select>
-            <select id="opt-birthdate-d"><option value="">일</option></select>
+        <div class="nav-card" id="nav-gwansang" style="--nav-accent: var(--holo-1);">
+          <div class="nav-icon">🔮</div>
+          <div>
+            <div class="nav-text-title">관상 보기</div>
+            <div class="nav-text-sub">사진 한 장으로 오늘의 관상을</div>
           </div>
+          <div class="nav-arrow">›</div>
         </div>
-        <div class="field-row"><label>태어난 시각 (선택)</label><select id="opt-birthtime"></select></div>
-        <div class="field-row"><label>태어난 장소 (선택)</label><input type="text" id="opt-birthplace" placeholder="서울특별시"></div>
+
+        <div class="nav-card" id="nav-gunghap" style="--nav-accent: var(--holo-2);">
+          <div class="nav-icon">💕</div>
+          <div>
+            <div class="nav-text-title">사주 궁합 보기</div>
+            <div class="nav-text-sub">생년월일로 알아보는 우리 케미</div>
+          </div>
+          <div class="nav-arrow">›</div>
+        </div>
+
+        <div class="nav-card" id="nav-saju" style="--nav-accent: var(--holo-3);">
+          <div class="nav-icon">🌟</div>
+          <div>
+            <div class="nav-text-title">오늘의 운세 보기</div>
+            <div class="nav-text-sub">총운 · 재물운 · 연애운 한번에</div>
+          </div>
+          <div class="nav-arrow">›</div>
+        </div>
       </div>
 
-      <div class="consent-row">
-        <input type="checkbox" id="consent-gwansang">
-        <label for="consent-gwansang">업로드한 사진과 입력 정보가 AI 분석을 위해 미국 소재 서버(Anthropic, Google)로 전송되며, 무료 등급 이용 시 Google이 이 데이터를 자사 서비스 개선(AI 학습 포함)에 활용할 수 있음에 동의합니다.</label>
+      <!-- ============ 관상 업로드 화면 ============ -->
+      <div id="gwansang-upload-view" style="display:none;">
+        <div class="back-link" data-back="home">← 처음으로</div>
+        <div class="view-title">🔮 관상 보기</div>
+        <div class="view-subtitle">사진 한 장으로 오늘의 관상을 봐드려요</div>
+
+        <div class="drop-zone" id="drop-zone">
+          <span class="icon">🖼️</span>
+          <div class="main-txt">얼굴 사진을 올려주세요</div>
+          <div class="sub-txt">클릭하거나 파일을 끌어다 놓으세요</div>
+        </div>
+        <input type="file" id="file-input" accept="image/*">
+
+        <div class="preview-wrap" id="preview-wrap">
+          <img id="preview-img" src="" alt="미리보기">
+          <div class="change-photo-link" id="change-photo-link">다른 사진 선택</div>
+        </div>
+
+        <div class="optional-toggle" id="optional-toggle">+ 생년월일 추가로 입력하기 (선택, 더 자세히 봐드려요)</div>
+        <div class="optional-fields" id="optional-fields">
+          <div class="field-row"><label>이름 (선택)</label><input type="text" id="opt-name" placeholder="홍길동"></div>
+          <div class="field-row"><label>생년월일 (선택)</label>
+            <div class="ymd-row" id="opt-birthdate-group">
+              <select id="opt-birthdate-y"><option value="">연도</option></select>
+              <select id="opt-birthdate-m"><option value="">월</option></select>
+              <select id="opt-birthdate-d"><option value="">일</option></select>
+            </div>
+          </div>
+          <div class="field-row"><label>태어난 시각 (선택)</label><select id="opt-birthtime"></select></div>
+          <div class="field-row"><label>태어난 장소 (선택)</label><input type="text" id="opt-birthplace" placeholder="서울특별시"></div>
+        </div>
+
+        <div class="consent-row">
+          <input type="checkbox" id="consent-gwansang">
+          <label for="consent-gwansang">업로드한 사진과 입력 정보가 AI 분석을 위해 미국 소재 서버(Anthropic, Google)로 전송되며, 무료 등급 이용 시 Google이 이 데이터를 자사 서비스 개선(AI 학습 포함)에 활용할 수 있음에 동의합니다.</label>
+        </div>
+
+        <button class="btn" id="analyze-btn" disabled>관 상 보 기</button>
+
+        <div class="disclaimer">
+          ⚠️ 본 서비스는 순수 재미 목적의 콘텐츠이며, 과학적·의학적 근거가 전혀 없습니다.<br>
+          업로드된 사진은 결과 생성 후 저장되지 않으며, AI 분석을 위해 해외 서버로 일시 전송됩니다.
+        </div>
       </div>
 
-      <button class="btn" id="analyze-btn" disabled>관 상 보 기</button>
+      <!-- ============ 사주 궁합 입력 화면 ============ -->
+      <div id="gunghap-form-view" style="display:none;">
+        <div class="back-link" data-back="home">← 처음으로</div>
+        <div class="view-title">💕 사주 궁합 보기</div>
+        <div class="view-subtitle">두 사람의 생년월일로 케미를 봐드려요</div>
 
-      <div class="disclaimer">
-        ⚠️ 본 서비스는 순수 재미 목적의 콘텐츠이며, 과학적·의학적 근거가 전혀 없습니다.<br>
-        업로드된 사진은 결과 생성 후 저장되지 않으며, AI 분석을 위해 해외 서버로 일시 전송됩니다.
+        <div class="person-block">
+          <div class="person-title">나</div>
+          <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-a" placeholder="이름"></div>
+          <div class="field-row"><label>생년월일</label>
+            <div class="ymd-row" id="g-birthdate-a-group">
+              <select id="g-birthdate-a-y"><option value="">연도</option></select>
+              <select id="g-birthdate-a-m"><option value="">월</option></select>
+              <select id="g-birthdate-a-d"><option value="">일</option></select>
+            </div>
+          </div>
+          <div class="field-row"><label>태어난 시각 (선택)</label><select id="g-birthtime-a"></select></div>
+        </div>
+
+        <div class="heart-divider">💕</div>
+
+        <div class="person-block">
+          <div class="person-title">상대방</div>
+          <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-b" placeholder="이름"></div>
+          <div class="field-row"><label>생년월일</label>
+            <div class="ymd-row" id="g-birthdate-b-group">
+              <select id="g-birthdate-b-y"><option value="">연도</option></select>
+              <select id="g-birthdate-b-m"><option value="">월</option></select>
+              <select id="g-birthdate-b-d"><option value="">일</option></select>
+            </div>
+          </div>
+          <div class="field-row"><label>태어난 시각 (선택)</label><select id="g-birthtime-b"></select></div>
+        </div>
+
+        <div class="consent-row">
+          <input type="checkbox" id="consent-gunghap">
+          <label for="consent-gunghap">입력한 두 사람의 이름과 생년월일 정보가 AI 분석을 위해 미국 소재 서버(Anthropic, Google)로 전송되며, 무료 등급 이용 시 Google이 이 데이터를 자사 서비스 개선(AI 학습 포함)에 활용할 수 있음에 동의합니다.</label>
+        </div>
+
+        <button class="btn" id="analyze-couple-btn" disabled>궁 합 보 기</button>
+
+        <div class="disclaimer">
+          ⚠️ 본 서비스는 순수 재미 목적의 콘텐츠이며, 과학적 근거가 전혀 없습니다.<br>
+          입력된 정보는 결과 생성 후 저장되지 않으며, AI 분석을 위해 해외 서버로 일시 전송됩니다.
+        </div>
       </div>
-    </div>
 
-    <!-- ============ 사주 궁합 입력 화면 (생년월일 기반) ============ -->
-    <div id="gunghap-form-view" style="display:none;">
-      <div class="back-link" data-back="home">← 처음으로</div>
-      <div class="view-title" style="margin-bottom: 18px;">💕 사주 궁합 보기</div>
+      <!-- ============ 오늘의 운세 입력 화면 (신규) ============ -->
+      <div id="saju-form-view" style="display:none;">
+        <div class="back-link" data-back="home">← 처음으로</div>
+        <div class="view-title">🌟 오늘의 운세 보기</div>
+        <div class="view-subtitle">생년월일로 오늘의 총운 · 재물운 · 연애운을 봐드려요</div>
 
-      <div class="person-block">
-        <div class="person-title">나</div>
-        <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-a" placeholder="이름"></div>
+        <div class="field-row"><label>이름 (선택)</label><input type="text" id="s-name" placeholder="홍길동"></div>
         <div class="field-row"><label>생년월일</label>
-          <div class="ymd-row" id="g-birthdate-a-group">
-            <select id="g-birthdate-a-y"><option value="">연도</option></select>
-            <select id="g-birthdate-a-m"><option value="">월</option></select>
-            <select id="g-birthdate-a-d"><option value="">일</option></select>
+          <div class="ymd-row" id="s-birthdate-group">
+            <select id="s-birthdate-y"><option value="">연도</option></select>
+            <select id="s-birthdate-m"><option value="">월</option></select>
+            <select id="s-birthdate-d"><option value="">일</option></select>
           </div>
         </div>
-        <div class="field-row"><label>태어난 시각 (선택)</label><select id="g-birthtime-a"></select></div>
-      </div>
+        <div class="field-row"><label>태어난 시각 (선택)</label><select id="s-birthtime"></select></div>
 
-      <div class="heart-divider">💕</div>
-
-      <div class="person-block">
-        <div class="person-title">상대방</div>
-        <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-b" placeholder="이름"></div>
-        <div class="field-row"><label>생년월일</label>
-          <div class="ymd-row" id="g-birthdate-b-group">
-            <select id="g-birthdate-b-y"><option value="">연도</option></select>
-            <select id="g-birthdate-b-m"><option value="">월</option></select>
-            <select id="g-birthdate-b-d"><option value="">일</option></select>
-          </div>
+        <div class="consent-row">
+          <input type="checkbox" id="consent-saju">
+          <label for="consent-saju">입력한 이름과 생년월일 정보가 AI 분석을 위해 미국 소재 서버(Anthropic, Google)로 전송되며, 무료 등급 이용 시 Google이 이 데이터를 자사 서비스 개선(AI 학습 포함)에 활용할 수 있음에 동의합니다.</label>
         </div>
-        <div class="field-row"><label>태어난 시각 (선택)</label><select id="g-birthtime-b"></select></div>
+
+        <button class="btn" id="analyze-saju-btn" disabled>운 세 보 기</button>
+
+        <div class="disclaimer">
+          ⚠️ 본 서비스는 순수 재미 목적의 콘텐츠이며, 과학적 근거가 전혀 없습니다.<br>
+          입력된 정보는 결과 생성 후 저장되지 않으며, AI 분석을 위해 해외 서버로 일시 전송됩니다.
+        </div>
       </div>
 
-      <div class="consent-row">
-        <input type="checkbox" id="consent-gunghap">
-        <label for="consent-gunghap">입력한 두 사람의 이름과 생년월일 정보가 AI 분석을 위해 미국 소재 서버(Anthropic, Google)로 전송되며, 무료 등급 이용 시 Google이 이 데이터를 자사 서비스 개선(AI 학습 포함)에 활용할 수 있음에 동의합니다.</label>
+      <!-- ============ 로딩 (공용) ============ -->
+      <div id="loading-view">
+        <div class="holo-spinner"></div>
+        <div class="loading-txt" id="loading-txt">살피는 중...</div>
       </div>
 
-      <button class="btn" id="analyze-couple-btn" disabled style="margin-top:16px;">궁 합 보 기</button>
+      <!-- ============ 에러 (공용) ============ -->
+      <div class="error-box" id="error-box"></div>
 
-      <div class="disclaimer" style="margin-top:14px;">
-        ⚠️ 본 서비스는 순수 재미 목적의 콘텐츠이며, 과학적 근거가 전혀 없습니다.<br>
-        입력된 정보는 결과 생성 후 저장되지 않으며, AI 분석을 위해 해외 서버로 일시 전송됩니다.
+      <!-- ============ 결과 화면 (3기능 공용) ============ -->
+      <div id="result-view">
+        <div class="result-header">
+          <img id="result-img" src="" alt="분석된 사진">
+          <div id="result-img-placeholder" style="display:none;"></div>
+          <div class="result-names" id="result-names" style="display:none;"></div>
+          <div class="result-title" id="result-title">-</div>
+          <div class="result-sub" id="result-sub">-</div>
+        </div>
+        <div id="features-container"></div>
+        <div class="fortune-box">
+          <div class="sticker" id="fortune-sticker">감정<br>완료</div>
+          <div class="label" id="fortune-score-label">오늘의 총운</div>
+          <div class="score" id="fortune-score">-</div>
+          <div class="fortune-text" id="fortune-text">-</div>
+        </div>
+        <button class="share-btn" id="share-btn">📤 결과 공유하기</button>
+        <div class="switch-row" id="switch-row"></div>
+        <div class="retry-row">
+          <button class="btn-outline" id="retry-btn">다시 해보기</button>
+          <button class="btn-outline" id="home-from-result-btn">처음으로</button>
+        </div>
+        <div class="final-disclaimer">⚠️ 재미로만 봐주세요. AI가 지어낸 이야기일 뿐입니다.</div>
       </div>
+
     </div>
-
-    <!-- ============ 로딩 (공용) ============ -->
-    <div id="loading-view">
-      <div class="seal-spin">相</div>
-      <div class="loading-txt" id="loading-txt">살피는 중...</div>
-    </div>
-
-    <!-- ============ 에러 (공용) ============ -->
-    <div class="error-box" id="error-box"></div>
-
-    <!-- ============ 관상 결과 ============ -->
-    <div id="result-view">
-      <div class="result-header">
-        <img id="result-img" src="" alt="분석된 사진">
-        <div id="result-img-placeholder" style="display:none; font-size:56px; margin-bottom:10px;">🔮</div>
-        <div class="result-title" id="result-title">-</div>
-        <div class="result-sub" id="result-sub">AI 관상소 감정 결과</div>
-      </div>
-      <div id="features-container"></div>
-      <div class="fortune-box">
-        <div class="stamp">감정<br>인장</div>
-        <div class="label">오늘의 총운</div>
-        <div class="score" id="fortune-score">-</div>
-        <div class="fortune-text" id="fortune-text">-</div>
-      </div>
-      <button class="share-btn" id="share-btn">📤 결과 공유하기</button>
-      <button class="retry-btn" id="retry-btn">다른 사진으로 다시 보기</button>
-      <div class="final-disclaimer">⚠️ 재미로만 봐주세요. AI가 지어낸 이야기일 뿐입니다.</div>
-    </div>
-
-    <!-- ============ 궁합 결과 ============ -->
-    <div id="couple-result-view">
-      <div class="result-header">
-        <div class="couple-result-names" id="couple-result-names">- 💕 -</div>
-        <div class="result-title" id="couple-result-title">-</div>
-        <div class="result-sub">AI 관상소 사주 궁합 감정 결과</div>
-      </div>
-      <div id="couple-features-container"></div>
-      <div class="fortune-box">
-        <div class="stamp">궁합<br>인장</div>
-        <div class="label">궁합 지수</div>
-        <div class="score" id="couple-score">-</div>
-        <div class="fortune-text" id="couple-summary">-</div>
-      </div>
-      <button class="share-btn" id="couple-share-btn">📤 결과 공유하기</button>
-      <button class="retry-btn" id="couple-retry-btn">다시 입력하기</button>
-      <div class="final-disclaimer">⚠️ 재미로만 봐주세요. AI가 지어낸 이야기일 뿐입니다.</div>
-    </div>
-
   </div>
 </div>
 
-<script>
-// ===================== 생년월일 연/월/일 드롭다운 유틸 =====================
-function daysInMonth(year, month) {
-  if (!year || !month) return 31;
-  return new Date(year, month, 0).getDate();
-}
-
-function populateYMDSelect(prefix) {
-  const ySel = document.getElementById(prefix + '-y');
-  const mSel = document.getElementById(prefix + '-m');
-  const dSel = document.getElementById(prefix + '-d');
-  const currentYear = new Date().getFullYear();
-
-  for (let y = currentYear; y >= 1920; y--) {
-    const opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = y + '년';
-    ySel.appendChild(opt);
-  }
-  for (let m = 1; m <= 12; m++) {
-    const opt = document.createElement('option');
-    opt.value = m;
-    opt.textContent = m + '월';
-    mSel.appendChild(opt);
-  }
-  function refreshDays() {
-    const prevValue = dSel.value;
-    const maxDay = daysInMonth(parseInt(ySel.value), parseInt(mSel.value));
-    dSel.innerHTML = '<option value="">일</option>';
-    for (let d = 1; d <= maxDay; d++) {
-      const opt = document.createElement('option');
-      opt.value = d;
-      opt.textContent = d + '일';
-      dSel.appendChild(opt);
-    }
-    if (prevValue && parseInt(prevValue) <= maxDay) dSel.value = prevValue;
-  }
-  refreshDays();
-  ySel.addEventListener('change', refreshDays);
-  mSel.addEventListener('change', refreshDays);
-}
-
-function getYMDValue(prefix) {
-  const y = document.getElementById(prefix + '-y').value;
-  const m = document.getElementById(prefix + '-m').value;
-  const d = document.getElementById(prefix + '-d').value;
-  if (!y || !m || !d) return '';
-  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-}
-
-function resetYMDValue(prefix) {
-  ['-y', '-m', '-d'].forEach(suffix => {
-    document.getElementById(prefix + suffix).value = '';
-  });
-}
-
-['opt-birthdate', 'g-birthdate-a', 'g-birthdate-b'].forEach(populateYMDSelect);
-
-// ===================== 태어난 시각(십이시진) 드롭다운 유틸 =====================
-const SIJIN_OPTIONS = [
-  '자시 (23시~01시)', '축시 (01시~03시)', '인시 (03시~05시)', '묘시 (05시~07시)',
-  '진시 (07시~09시)', '사시 (09시~11시)', '오시 (11시~13시)', '미시 (13시~15시)',
-  '신시 (15시~17시)', '유시 (17시~19시)', '술시 (19시~21시)', '해시 (21시~23시)'
-];
-function populateSijinSelect(id) {
-  const sel = document.getElementById(id);
-  const blank = document.createElement('option');
-  blank.value = '';
-  blank.textContent = '모름 / 선택 안 함';
-  sel.appendChild(blank);
-  SIJIN_OPTIONS.forEach(label => {
-    const opt = document.createElement('option');
-    opt.value = label;
-    opt.textContent = label;
-    sel.appendChild(opt);
-  });
-}
-['opt-birthtime', 'g-birthtime-a', 'g-birthtime-b'].forEach(populateSijinSelect);
-
-// ===================== 결과 공유용 인코딩 유틸 (서버 저장 없이 URL에 결과를 담음, LZ 압축으로 링크 길이 최소화) =====================
-function encodeShareData(obj) {
-  const json = JSON.stringify(obj);
-  return LZString.compressToEncodedURIComponent(json);
-}
-function decodeShareData(str) {
-  const json = LZString.decompressFromEncodedURIComponent(str);
-  if (!json) throw new Error('공유 데이터를 해석할 수 없습니다');
-  return JSON.parse(json);
-}
-
-// IIFE(initFromSharedLink)가 아래에서 곧바로 showResult/showCoupleResult를 호출할 수 있어서,
-// 그 함수들이 참조하는 아래 두 변수는 반드시 그 호출 이전에 선언되어 있어야 함(TDZ 에러 방지)
-let currentGwansangShareUrl = window.location.href;
-let currentGunghapShareUrl = window.location.href;
-
-const VIEWS = ['home-view', 'gwansang-upload-view', 'gunghap-form-view', 'loading-view', 'result-view', 'couple-result-view'];
-function showView(id) {
-  VIEWS.forEach(v => {
-    const el = document.getElementById(v);
-    if (!el) return;
-    if (v === id) {
-      el.style.display = 'block';
-      el.classList.add('show');
-    } else {
-      el.style.display = 'none';
-      el.classList.remove('show');
-    }
-  });
-  document.getElementById('error-box').classList.remove('show');
-}
-
-document.getElementById('nav-gwansang').addEventListener('click', () => showView('gwansang-upload-view'));
-document.getElementById('nav-gunghap').addEventListener('click', () => showView('gunghap-form-view'));
-document.querySelectorAll('[data-back="home"]').forEach(el => {
-  el.addEventListener('click', () => showView('home-view'));
-});
-
-showView('home-view');
-
-// ===================== 공유된 링크로 접속한 경우, 해당 결과를 바로 표시 =====================
-(function initFromSharedLink() {
-  const params = new URLSearchParams(window.location.search);
-  try {
-    if (params.has('r')) {
-      const data = decodeShareData(params.get('r'));
-      showResult({
-        title: data.t,
-        features: (data.f || []).map(x => ({ part: x.p, emoji: x.e, text: x.x })),
-        fortune_score: data.s,
-        fortune_text: data.ft
-      }, true);
-    } else if (params.has('c')) {
-      const data = decodeShareData(params.get('c'));
-      showCoupleResult({
-        title: data.t,
-        features: (data.f || []).map(x => ({ part: x.p, emoji: x.e, text: x.x })),
-        compatibility_score: data.s,
-        summary: data.sm
-      }, { name: data.pa }, { name: data.pb });
-    }
-  } catch (err) {
-    // 링크가 손상된 경우 조용히 홈 화면 유지
-  }
-})();
-
-// ===================== 관상(1인, 사진) =====================
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('file-input');
-const previewWrap = document.getElementById('preview-wrap');
-const previewImg = document.getElementById('preview-img');
-const analyzeBtn = document.getElementById('analyze-btn');
-const loadingTxt = document.getElementById('loading-txt');
-const errorBox = document.getElementById('error-box');
-
-let base64Image = null;
-let mediaType = null;
-
-const loadingMessages = [
-  '이목구비를 살피는 중...', '눈매의 기운을 읽는 중...', '코끝의 재물운을 보는 중...',
-  '입가의 인복을 살피는 중...', '관상학 고서를 뒤적이는 중...', '오늘의 총운을 계산하는 중...'
-];
-const coupleLoadingMessages = [
-  '두 사람의 사주를 대조하는 중...', '오행의 상생상극을 살피는 중...', '띠 궁합을 가늠하는 중...',
-  '사주명리 고서를 뒤적이는 중...', '케미를 계산하는 중...'
-];
-let loadingInterval = null;
-
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', (e) => {
-  if (e.target.files.length) handleFile(e.target.files[0]);
-});
-
-function checkGwansangReady() {
-  analyzeBtn.disabled = !(base64Image && document.getElementById('consent-gwansang').checked);
-}
-
-function handleFile(file) {
-  if (!file.type.startsWith('image/')) return;
-  mediaType = file.type;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    previewImg.src = e.target.result;
-    base64Image = e.target.result.split(',')[1];
-    dropZone.style.display = 'none';
-    previewWrap.classList.add('show');
-    checkGwansangReady();
-  };
-  reader.readAsDataURL(file);
-}
-
-document.getElementById('consent-gwansang').addEventListener('change', checkGwansangReady);
-
-document.getElementById('change-photo-link').addEventListener('click', () => {
-  dropZone.style.display = 'block';
-  previewWrap.classList.remove('show');
-  fileInput.value = '';
-  base64Image = null;
-  analyzeBtn.disabled = true;
-  fileInput.click();
-});
-
-document.getElementById('optional-toggle').addEventListener('click', function () {
-  const fields = document.getElementById('optional-fields');
-  fields.classList.toggle('show');
-  this.textContent = fields.classList.contains('show')
-    ? '- 생년월일 정보 접기'
-    : '+ 생년월일 추가로 입력하기 (선택, 더 자세히 봐드려요)';
-});
-
-analyzeBtn.addEventListener('click', async () => {
-  if (!base64Image) return;
-
-  const optionalInfo = {
-    name: document.getElementById('opt-name').value.trim(),
-    birthdate: getYMDValue('opt-birthdate'),
-    birthtime: document.getElementById('opt-birthtime').value,
-    birthplace: document.getElementById('opt-birthplace').value.trim()
-  };
-
-  showView('loading-view');
-  let msgIdx = 0;
-  loadingTxt.textContent = loadingMessages[0];
-  loadingInterval = setInterval(() => {
-    msgIdx = (msgIdx + 1) % loadingMessages.length;
-    loadingTxt.textContent = loadingMessages[msgIdx];
-  }, 1400);
-
-  try {
-    const result = await analyzeFace(base64Image, mediaType, optionalInfo);
-    clearInterval(loadingInterval);
-    showResult(result);
-  } catch (err) {
-    clearInterval(loadingInterval);
-    errorBox.textContent = '감정 도중 문제가 발생했습니다: ' + err.message + ' (다시 시도해주세요)';
-    errorBox.classList.add('show');
-    showView('gwansang-upload-view');
-  }
-});
-
-// ===================== 통합 공유 함수 (일반 브라우저 → 카톡 인앱 → 클립보드 순으로 폴백) =====================
-async function shareResult({ title, description, imageUrl, url }) {
-  // 1순위: 일반 브라우저(사파리/크롬)의 OS 공유시트. 카톡 인앱 브라우저에는 이 기능 자체가 없음
-  if (navigator.share) {
-    try {
-      await navigator.share({ url });
-      return;
-    } catch (err) {
-      return; // 사용자가 공유를 취소한 경우도 여기로 옴 — 추가 폴백 시도 안 함
-    }
-  }
-  // 2순위: 카카오 SDK로 정식 카톡 공유 카드 띄우기 (카톡 인앱 브라우저에서 주로 여기로 옴)
-  if (window.Kakao && Kakao.isInitialized()) {
-    try {
-      Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: { title, description, imageUrl, link: { mobileWebUrl: url, webUrl: url } }
-      });
-      return;
-    } catch (err) {
-      // 카카오 SDK 실패 시 아래 클립보드 폴백으로 이어짐
-    }
-  }
-  // 3순위: 클립보드 복사 (최종 안전장치)
-  try {
-    await navigator.clipboard.writeText(url);
-    alert('링크가 복사되었습니다! 친구에게 붙여넣기 해보세요.');
-  } catch (err) {}
-}
-
-document.getElementById('share-btn').addEventListener('click', () => {
-  shareResult({
-    title: document.getElementById('result-title').textContent || 'AI 관상소',
-    description: '내 관상 결과는? 재미로 보는 AI 관상소 🔮',
-    imageUrl: 'https://ai-gwansang-one.vercel.app/og-image.png',
-    url: currentGwansangShareUrl
-  });
-});
-
-document.getElementById('retry-btn').addEventListener('click', () => {
-  history.replaceState(null, '', window.location.pathname);
-  dropZone.style.display = 'block';
-  previewWrap.classList.remove('show');
-  fileInput.value = '';
-  base64Image = null;
-  analyzeBtn.disabled = true;
-  document.getElementById('optional-fields').classList.remove('show');
-  document.getElementById('consent-gwansang').checked = false;
-  ['opt-name', 'opt-birthtime', 'opt-birthplace'].forEach(id => document.getElementById(id).value = '');
-  resetYMDValue('opt-birthdate');
-  showView('gwansang-upload-view');
-});
-
-async function analyzeFace(base64, mediaType, optionalInfo) {
-  const hasOptional = optionalInfo.name || optionalInfo.birthdate || optionalInfo.birthtime || optionalInfo.birthplace;
-
-  const response = await fetch("/api/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "gwansang",
-      base64Image: base64,
-      mediaType: mediaType,
-      optionalInfo: hasOptional ? optionalInfo : undefined
-    })
-  });
-
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    throw new Error(errBody.error || ('API 응답 오류 (' + response.status + ')'));
-  }
-  return await response.json();
-}
-
-function showResult(result, sharedFromLink) {
-  if (sharedFromLink) {
-    document.getElementById('result-img').style.display = 'none';
-    document.getElementById('result-img-placeholder').style.display = 'block';
-    document.getElementById('result-sub').textContent = 'AI 관상소 감정 결과 (공유된 링크 · 원본 사진은 포함되지 않습니다)';
-  } else {
-    document.getElementById('result-img').style.display = '';
-    document.getElementById('result-img-placeholder').style.display = 'none';
-    document.getElementById('result-sub').textContent = 'AI 관상소 감정 결과';
-    document.getElementById('result-img').src = previewImg.src;
-
-    // 공유 링크에는 원본 사진을 담지 않음 (용량 문제 + 사진 자체는 공유 안 하는 게 원칙)
-    const shareData = {
-      t: result.title || '',
-      f: (result.features || []).map(x => ({ p: x.part, e: x.emoji, x: x.text })),
-      s: result.fortune_score || '',
-      ft: result.fortune_text || ''
-    };
-    const url = new URL(window.location.href.split('?')[0]);
-    url.searchParams.set('r', encodeShareData(shareData));
-    currentGwansangShareUrl = url.toString();
-  }
-
-  document.getElementById('result-title').textContent = result.title || '알 수 없는 관상';
-  document.getElementById('fortune-score').textContent = result.fortune_score || '-';
-  document.getElementById('fortune-text').textContent = result.fortune_text || '';
-
-  const container = document.getElementById('features-container');
-  container.innerHTML = '';
-  (result.features || []).forEach((f, i) => {
-    const block = document.createElement('div');
-    block.className = 'feature-block';
-    block.style.opacity = '0';
-    block.style.transform = 'translateY(8px)';
-    block.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-    block.innerHTML = `<div class="feature-label">${f.emoji || '✨'} ${f.part || ''}</div><div class="feature-text">${f.text || ''}</div>`;
-    container.appendChild(block);
-    setTimeout(() => { block.style.opacity = '1'; block.style.transform = 'translateY(0)'; }, 150 * i + 100);
-  });
-
-  showView('result-view');
-}
-
-// ===================== 사주 궁합(2인, 생년월일 기반) =====================
-const analyzeCoupleBtn = document.getElementById('analyze-couple-btn');
-const gA = { name: '', birthdate: '', birthtime: '' };
-const gB = { name: '', birthdate: '', birthtime: '' };
-
-function checkGunghapReady() {
-  const bdA = getYMDValue('g-birthdate-a');
-  const bdB = getYMDValue('g-birthdate-b');
-  const consented = document.getElementById('consent-gunghap').checked;
-  analyzeCoupleBtn.disabled = !(bdA && bdB && consented);
-}
-['g-birthdate-a-y', 'g-birthdate-a-m', 'g-birthdate-a-d', 'g-birthdate-b-y', 'g-birthdate-b-m', 'g-birthdate-b-d'].forEach(id => {
-  document.getElementById(id).addEventListener('change', checkGunghapReady);
-});
-document.getElementById('consent-gunghap').addEventListener('change', checkGunghapReady);
-
-analyzeCoupleBtn.addEventListener('click', async () => {
-  const personA = {
-    name: document.getElementById('g-name-a').value.trim() || '나',
-    birthdate: getYMDValue('g-birthdate-a'),
-    birthtime: document.getElementById('g-birthtime-a').value
-  };
-  const personB = {
-    name: document.getElementById('g-name-b').value.trim() || '상대방',
-    birthdate: getYMDValue('g-birthdate-b'),
-    birthtime: document.getElementById('g-birthtime-b').value
-  };
-  if (!personA.birthdate || !personB.birthdate) return;
-
-  showView('loading-view');
-  let msgIdx = 0;
-  loadingTxt.textContent = coupleLoadingMessages[0];
-  loadingInterval = setInterval(() => {
-    msgIdx = (msgIdx + 1) % coupleLoadingMessages.length;
-    loadingTxt.textContent = coupleLoadingMessages[msgIdx];
-  }, 1400);
-
-  try {
-    const result = await analyzeCompatibility(personA, personB);
-    clearInterval(loadingInterval);
-    showCoupleResult(result, personA, personB);
-  } catch (err) {
-    clearInterval(loadingInterval);
-    errorBox.textContent = '감정 도중 문제가 발생했습니다: ' + err.message + ' (다시 시도해주세요)';
-    errorBox.classList.add('show');
-    showView('gunghap-form-view');
-  }
-});
-
-document.getElementById('couple-share-btn').addEventListener('click', () => {
-  shareResult({
-    title: document.getElementById('couple-result-title').textContent || 'AI 관상소',
-    description: '우리 사주 궁합은 몇 점일까? 재미로 보는 AI 관상소 💕',
-    imageUrl: 'https://ai-gwansang-one.vercel.app/og-image.png',
-    url: currentGunghapShareUrl
-  });
-});
-
-document.getElementById('couple-retry-btn').addEventListener('click', () => {
-  history.replaceState(null, '', window.location.pathname);
-  ['g-name-a', 'g-birthtime-a', 'g-name-b', 'g-birthtime-b'].forEach(id => document.getElementById(id).value = '');
-  resetYMDValue('g-birthdate-a');
-  resetYMDValue('g-birthdate-b');
-  document.getElementById('consent-gunghap').checked = false;
-  analyzeCoupleBtn.disabled = true;
-  showView('gunghap-form-view');
-});
-
-async function analyzeCompatibility(personA, personB) {
-  const response = await fetch("/api/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "gunghap",
-      personA: personA,
-      personB: personB
-    })
-  });
-
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    throw new Error(errBody.error || ('API 응답 오류 (' + response.status + ')'));
-  }
-  return await response.json();
-}
-
-function showCoupleResult(result, personA, personB) {
-  document.getElementById('couple-result-names').textContent = `${personA.name} 💕 ${personB.name}`;
-  document.getElementById('couple-result-title').textContent = result.title || '알 수 없는 궁합';
-  document.getElementById('couple-score').textContent = result.compatibility_score || '-';
-  document.getElementById('couple-summary').textContent = result.summary || '';
-
-  const shareData = {
-    pa: personA.name, pb: personB.name,
-    t: result.title || '',
-    f: (result.features || []).map(x => ({ p: x.part, e: x.emoji, x: x.text })),
-    s: result.compatibility_score || '',
-    sm: result.summary || ''
-  };
-  const url = new URL(window.location.href.split('?')[0]);
-  url.searchParams.set('c', encodeShareData(shareData));
-  currentGunghapShareUrl = url.toString();
-
-  const container = document.getElementById('couple-features-container');
-  container.innerHTML = '';
-  (result.features || []).forEach((f, i) => {
-    const block = document.createElement('div');
-    block.className = 'feature-block';
-    block.style.opacity = '0';
-    block.style.transform = 'translateY(8px)';
-    block.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-    block.innerHTML = `<div class="feature-label">${f.emoji || '✨'} ${f.part || ''}</div><div class="feature-text">${f.text || ''}</div>`;
-    container.appendChild(block);
-    setTimeout(() => { block.style.opacity = '1'; block.style.transform = 'translateY(0)'; }, 150 * i + 100);
-  });
-
-  showView('couple-result-view');
-}
-</script>
-
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
