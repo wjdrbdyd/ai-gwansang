@@ -4,7 +4,7 @@
 // ============================================================
 
 import {
-  populateYMDSelect, getYMDValue, resetYMDValue,
+  bindAutoFormatDateInput, getDateValue, resetDateValue,
   populateSijinSelect, showView
 } from './dom-utils.js';
 import { encodeShareData, decodeShareData, buildShareUrl, shareResult } from './share.js';
@@ -82,15 +82,16 @@ function showError(message, backToViewId) {
 }
 
 // ============================================================
-// 드롭다운 초기화
+// 생년월일 인풋 / 시진 드롭다운 초기화
 // ============================================================
-['opt-birthdate', 'g-birthdate-a', 'g-birthdate-b', 's-birthdate'].forEach(populateYMDSelect);
+['opt-birthdate', 'g-birthdate-a', 'g-birthdate-b', 's-birthdate'].forEach(bindAutoFormatDateInput);
 ['opt-birthtime', 'g-birthtime-a', 'g-birthtime-b', 's-birthtime'].forEach(populateSijinSelect);
 
 // ============================================================
 // 홈 / 네비게이션
 // ============================================================
 document.getElementById('topbar-brand').addEventListener('click', () => showView('home-view'));
+document.getElementById('topbar-home').addEventListener('click', () => showView('home-view'));
 document.getElementById('nav-gwansang').addEventListener('click', () => showView('gwansang-upload-view'));
 document.getElementById('nav-gunghap').addEventListener('click', () => showView('gunghap-form-view'));
 document.getElementById('nav-saju').addEventListener('click', () => showView('saju-form-view'));
@@ -102,7 +103,15 @@ document.querySelectorAll('[data-back="home"]').forEach((el) => {
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
 });
 
-showView('home-view');
+// 최초 진입 화면을 히스토리에 기록 (뒤로가기 매핑의 기준점)
+history.replaceState({ view: 'home-view' }, '', window.location.pathname + window.location.search);
+showView('home-view', false);
+
+// 모바일/브라우저 뒤로가기 → 화면 전환으로 매핑 (기존엔 히스토리가 안 쌓여서 뒤로가기 누르면 앱이 바로 종료됐음)
+window.addEventListener('popstate', (e) => {
+  const view = e.state?.view || 'home-view';
+  showView(view, false);
+});
 
 // ============================================================
 // 공유된 링크로 접속한 경우, 결과를 바로 표시 (요청사항 #2 연계:
@@ -158,16 +167,16 @@ function wireResultActions() {
   };
 
   document.getElementById('retry-btn').onclick = () => {
-    history.replaceState(null, '', window.location.pathname);
+    history.replaceState({ view: TYPE_CONFIG[resultCtx.type].formViewId }, '', window.location.pathname);
     if (resultCtx.type === 'gwansang') resetGwansangForm();
     if (resultCtx.type === 'gunghap') resetGunghapForm();
     if (resultCtx.type === 'unse') resetSajuForm();
-    showView(TYPE_CONFIG[resultCtx.type].formViewId);
+    showView(TYPE_CONFIG[resultCtx.type].formViewId, false);
   };
 
   document.getElementById('home-from-result-btn').onclick = () => {
-    history.replaceState(null, '', window.location.pathname);
-    showView('home-view');
+    history.replaceState({ view: 'home-view' }, '', window.location.pathname);
+    showView('home-view', false);
   };
 
   const switchRow = document.getElementById('switch-row');
@@ -180,8 +189,8 @@ function wireResultActions() {
     chip.setAttribute('role', 'button');
     chip.setAttribute('tabindex', '0');
     chip.addEventListener('click', () => {
-      history.replaceState(null, '', window.location.pathname);
-      showView(TYPE_CONFIG[type].formViewId);
+      history.replaceState({ view: TYPE_CONFIG[type].formViewId }, '', window.location.pathname);
+      showView(TYPE_CONFIG[type].formViewId, false);
     });
     chip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chip.click(); } });
     switchRow.appendChild(chip);
@@ -253,7 +262,7 @@ function resetGwansangForm() {
   document.getElementById('optional-fields').classList.remove('show');
   document.getElementById('consent-gwansang').checked = false;
   ['opt-name', 'opt-birthtime', 'opt-birthplace'].forEach((id) => { document.getElementById(id).value = ''; });
-  resetYMDValue('opt-birthdate');
+  resetDateValue('opt-birthdate');
 }
 
 function renderGwansangResult(result, sharedFromLink) {
@@ -299,7 +308,7 @@ analyzeBtn.addEventListener('click', async () => {
   if (!base64Image) return;
   const optionalInfo = {
     name: document.getElementById('opt-name').value.trim(),
-    birthdate: getYMDValue('opt-birthdate'),
+    birthdate: getDateValue('opt-birthdate'),
     birthtime: document.getElementById('opt-birthtime').value,
     birthplace: document.getElementById('opt-birthplace').value.trim()
   };
@@ -319,20 +328,20 @@ analyzeBtn.addEventListener('click', async () => {
 const analyzeCoupleBtn = document.getElementById('analyze-couple-btn');
 
 function checkGunghapReady() {
-  const bdA = getYMDValue('g-birthdate-a');
-  const bdB = getYMDValue('g-birthdate-b');
+  const bdA = getDateValue('g-birthdate-a');
+  const bdB = getDateValue('g-birthdate-b');
   const consented = document.getElementById('consent-gunghap').checked;
   analyzeCoupleBtn.disabled = !(bdA && bdB && consented);
 }
-['g-birthdate-a-y', 'g-birthdate-a-m', 'g-birthdate-a-d', 'g-birthdate-b-y', 'g-birthdate-b-m', 'g-birthdate-b-d'].forEach((id) => {
-  document.getElementById(id).addEventListener('change', checkGunghapReady);
+['g-birthdate-a', 'g-birthdate-b'].forEach((id) => {
+  document.getElementById(id).addEventListener('input', checkGunghapReady);
 });
 document.getElementById('consent-gunghap').addEventListener('change', checkGunghapReady);
 
 function resetGunghapForm() {
   ['g-name-a', 'g-birthtime-a', 'g-name-b', 'g-birthtime-b'].forEach((id) => { document.getElementById(id).value = ''; });
-  resetYMDValue('g-birthdate-a');
-  resetYMDValue('g-birthdate-b');
+  resetDateValue('g-birthdate-a');
+  resetDateValue('g-birthdate-b');
   document.getElementById('consent-gunghap').checked = false;
   analyzeCoupleBtn.disabled = true;
 }
@@ -365,12 +374,12 @@ function renderGunghapResult(result, personA, personB) {
 analyzeCoupleBtn.addEventListener('click', async () => {
   const personA = {
     name: document.getElementById('g-name-a').value.trim() || '나',
-    birthdate: getYMDValue('g-birthdate-a'),
+    birthdate: getDateValue('g-birthdate-a'),
     birthtime: document.getElementById('g-birthtime-a').value
   };
   const personB = {
     name: document.getElementById('g-name-b').value.trim() || '상대방',
-    birthdate: getYMDValue('g-birthdate-b'),
+    birthdate: getDateValue('g-birthdate-b'),
     birthtime: document.getElementById('g-birthtime-b').value
   };
   if (!personA.birthdate || !personB.birthdate) return;
@@ -385,24 +394,22 @@ analyzeCoupleBtn.addEventListener('click', async () => {
 });
 
 // ============================================================
-// 3) 오늘의 운세 (1인, 생년월일 기반) — 신규 기능
+// 3) 오늘의 운세 (1인, 생년월일 기반)
 // ============================================================
 const analyzeSajuBtn = document.getElementById('analyze-saju-btn');
 
 function checkSajuReady() {
-  const bd = getYMDValue('s-birthdate');
+  const bd = getDateValue('s-birthdate');
   const consented = document.getElementById('consent-saju').checked;
   analyzeSajuBtn.disabled = !(bd && consented);
 }
-['s-birthdate-y', 's-birthdate-m', 's-birthdate-d'].forEach((id) => {
-  document.getElementById(id).addEventListener('change', checkSajuReady);
-});
+document.getElementById('s-birthdate').addEventListener('input', checkSajuReady);
 document.getElementById('consent-saju').addEventListener('change', checkSajuReady);
 
 function resetSajuForm() {
   document.getElementById('s-name').value = '';
   document.getElementById('s-birthtime').value = '';
-  resetYMDValue('s-birthdate');
+  resetDateValue('s-birthdate');
   document.getElementById('consent-saju').checked = false;
   analyzeSajuBtn.disabled = true;
 }
@@ -435,7 +442,7 @@ function renderSajuResult(result, person) {
 analyzeSajuBtn.addEventListener('click', async () => {
   const person = {
     name: document.getElementById('s-name').value.trim(),
-    birthdate: getYMDValue('s-birthdate'),
+    birthdate: getDateValue('s-birthdate'),
     birthtime: document.getElementById('s-birthtime').value
   };
   if (!person.birthdate) return;

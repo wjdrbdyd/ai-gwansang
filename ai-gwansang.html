@@ -39,6 +39,7 @@
     <div class="topbar-brand" id="topbar-brand" role="button" tabindex="0" aria-label="처음으로">
       <span class="topbar-orb" aria-hidden="true"></span>AI 관상소
     </div>
+    <div class="topbar-home" id="topbar-home" role="button" tabindex="0" aria-label="처음으로">홈</div>
   </div>
 
   <div class="ad-slot">광고 영역 (배포 후 AdSense 심사 통과 시 표시)</div>
@@ -104,11 +105,7 @@
         <div class="optional-fields" id="optional-fields">
           <div class="field-row"><label>이름 (선택)</label><input type="text" id="opt-name" placeholder="홍길동"></div>
           <div class="field-row"><label>생년월일 (선택)</label>
-            <div class="ymd-row" id="opt-birthdate-group">
-              <select id="opt-birthdate-y"><option value="">연도</option></select>
-              <select id="opt-birthdate-m"><option value="">월</option></select>
-              <select id="opt-birthdate-d"><option value="">일</option></select>
-            </div>
+            <input type="text" id="opt-birthdate" inputmode="numeric" placeholder="1994.08.15" maxlength="10">
           </div>
           <div class="field-row"><label>태어난 시각 (선택)</label><select id="opt-birthtime"></select></div>
           <div class="field-row"><label>태어난 장소 (선택)</label><input type="text" id="opt-birthplace" placeholder="서울특별시"></div>
@@ -137,11 +134,7 @@
           <div class="person-title">나</div>
           <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-a" placeholder="이름"></div>
           <div class="field-row"><label>생년월일</label>
-            <div class="ymd-row" id="g-birthdate-a-group">
-              <select id="g-birthdate-a-y"><option value="">연도</option></select>
-              <select id="g-birthdate-a-m"><option value="">월</option></select>
-              <select id="g-birthdate-a-d"><option value="">일</option></select>
-            </div>
+            <input type="text" id="g-birthdate-a" inputmode="numeric" placeholder="1994.08.15" maxlength="10">
           </div>
           <div class="field-row"><label>태어난 시각 (선택)</label><select id="g-birthtime-a"></select></div>
         </div>
@@ -152,11 +145,7 @@
           <div class="person-title">상대방</div>
           <div class="field-row"><label>이름 (선택)</label><input type="text" id="g-name-b" placeholder="이름"></div>
           <div class="field-row"><label>생년월일</label>
-            <div class="ymd-row" id="g-birthdate-b-group">
-              <select id="g-birthdate-b-y"><option value="">연도</option></select>
-              <select id="g-birthdate-b-m"><option value="">월</option></select>
-              <select id="g-birthdate-b-d"><option value="">일</option></select>
-            </div>
+            <input type="text" id="g-birthdate-b" inputmode="numeric" placeholder="1994.08.15" maxlength="10">
           </div>
           <div class="field-row"><label>태어난 시각 (선택)</label><select id="g-birthtime-b"></select></div>
         </div>
@@ -174,7 +163,7 @@
         </div>
       </div>
 
-      <!-- ============ 오늘의 운세 입력 화면 (신규) ============ -->
+      <!-- ============ 오늘의 운세 입력 화면 ============ -->
       <div id="saju-form-view" style="display:none;">
         <div class="back-link" data-back="home">← 처음으로</div>
         <div class="view-title">🌟 오늘의 운세 보기</div>
@@ -182,11 +171,7 @@
 
         <div class="field-row"><label>이름 (선택)</label><input type="text" id="s-name" placeholder="홍길동"></div>
         <div class="field-row"><label>생년월일</label>
-          <div class="ymd-row" id="s-birthdate-group">
-            <select id="s-birthdate-y"><option value="">연도</option></select>
-            <select id="s-birthdate-m"><option value="">월</option></select>
-            <select id="s-birthdate-d"><option value="">일</option></select>
-          </div>
+          <input type="text" id="s-birthdate" inputmode="numeric" placeholder="1994.08.15" maxlength="10">
         </div>
         <div class="field-row"><label>태어난 시각 (선택)</label><select id="s-birthtime"></select></div>
 
