@@ -20,16 +20,12 @@
 <!-- 결과 공유 링크 압축 (서버 저장 없이 URL에 결과를 담기 위함) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 
-<!-- 카카오톡 인앱 브라우저에서도 정식 공유 카드를 띄우기 위한 SDK.
-     사용 전: 1) developers.kakao.com 앱 생성(무료) → JavaScript 키 발급
-              2) 플랫폼 > Web에 배포 도메인 등록
-              3) 아래 YOUR_KAKAO_JS_KEY를 발급받은 키로 교체 -->
-<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
-<script>
-  if (window.Kakao && !Kakao.isInitialized()) {
-    Kakao.init('YOUR_KAKAO_JS_KEY');
-  }
-</script>
+<!-- [2026-08-26 제거] 카카오 공유 SDK — placeholder 키(YOUR_KAKAO_JS_KEY)로
+     인해 실제 공유 시 "요청실패"가 발생해서 제거함. 실제 앱 키를 등록하면
+     (developers.kakao.com 앱 생성 → Web 플랫폼에 배포 도메인 등록 →
+     JS 키 발급) 이 스크립트와 js/share.js의 Kakao 분기를 다시 추가하면 됨.
+     제거해도 OG 태그 기반 링크 미리보기(카톡 대화방에 링크 붙여넣기)는
+     별개로 정상 동작함. -->
 </head>
 <body>
 

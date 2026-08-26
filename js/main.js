@@ -104,7 +104,8 @@ document.querySelectorAll('[data-back="home"]').forEach((el) => {
 });
 
 // 최초 진입 화면을 히스토리에 기록 (뒤로가기 매핑의 기준점)
-history.replaceState({ view: 'home-view' }, '', window.location.pathname + window.location.search);
+// 해시(#r=...)는 반드시 유지해야 함 — 지우면 아래 initFromSharedLink()가 공유 데이터를 못 읽음
+history.replaceState({ view: 'home-view' }, '', window.location.pathname + window.location.search + window.location.hash);
 showView('home-view', false);
 
 // 모바일/브라우저 뒤로가기 → 화면 전환으로 매핑 (기존엔 히스토리가 안 쌓여서 뒤로가기 누르면 앱이 바로 종료됐음)
@@ -118,7 +119,12 @@ window.addEventListener('popstate', (e) => {
 // 이 경우에도 상단바로 홈 이동 + 결과 화면 하단 스위치 칩으로 다른 기능 이동 가능)
 // ============================================================
 (function initFromSharedLink() {
-  const params = new URLSearchParams(window.location.search);
+  // 해시(#r=...) 우선 확인 (신규 방식). 구버전에 뿌려진 링크(?r=...)도 하위호환으로 계속 읽어줌.
+  const rawHash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const hashParams = new URLSearchParams(rawHash);
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasHashData = hashParams.has('r') || hashParams.has('c') || hashParams.has('u');
+  const params = hasHashData ? hashParams : searchParams;
   try {
     if (params.has('r')) {
       const data = decodeShareData(params.get('r'));
