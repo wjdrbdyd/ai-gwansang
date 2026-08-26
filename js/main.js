@@ -104,7 +104,7 @@ document.querySelectorAll('[data-back="home"]').forEach((el) => {
 });
 
 // 최초 진입 화면을 히스토리에 기록 (뒤로가기 매핑의 기준점)
-// 해시(#r=...)는 반드시 유지해야 함 — 지우면 아래 initFromSharedLink()가 공유 데이터를 못 읽음
+// 해시(#r=...)는 반드시 유지해야 함 — 지우면 파일 맨 끝의 checkSharedLinkAndRender()가 공유 데이터를 못 읽음
 history.replaceState({ view: 'home-view' }, '', window.location.pathname + window.location.search + window.location.hash);
 showView('home-view', false);
 
@@ -113,59 +113,6 @@ window.addEventListener('popstate', (e) => {
   const view = e.state?.view || 'home-view';
   showView(view, false);
 });
-
-// ============================================================
-// 공유된 링크로 접속한 경우, 결과를 바로 표시 (요청사항 #2 연계:
-// 이 경우에도 상단바로 홈 이동 + 결과 화면 하단 스위치 칩으로 다른 기능 이동 가능)
-//
-// [2026-08-26 버그 수정] 해시(#u=...) 방식으로 바꾼 뒤, "이미 같은 탭에서 이 사이트가
-// 열려있는 상태에서 해시만 다른 링크로 이동"하는 경우(주소창에 붙여넣기, 카톡
-// 인앱 브라우저가 기존 웹뷰를 재사용하는 경우 등) 브라우저가 "같은 문서 내
-// 이동(same-document navigation)"으로 처리해서 페이지를 새로 안 불러오고, 그 결과
-// 우리 스크립트도 재실행이 안 돼서 결과가 아예 안 보이는 문제가 있었음.
-// hashchange 이벤트를 별도로 감지해서 그 경우에도 다시 파싱/렌더링하도록
-// 함수를 재사용 가능한 형태로 분리함.
-// ============================================================
-function checkSharedLinkAndRender() {
-  // 해시(#r=...) 우선 확인 (신규 방식). 구버전에 뿌려진 링크(?r=...)도 하위호환으로 계속 읽어줌.
-  const rawHash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
-  const hashParams = new URLSearchParams(rawHash);
-  const searchParams = new URLSearchParams(window.location.search);
-  const hasHashData = hashParams.has('r') || hashParams.has('c') || hashParams.has('u');
-  const params = hasHashData ? hashParams : searchParams;
-  try {
-    if (params.has('r')) {
-      const data = decodeShareData(params.get('r'));
-      renderGwansangResult({
-        title: data.t,
-        features: (data.f || []).map((x) => ({ part: x.p, emoji: x.e, text: x.x })),
-        fortune_score: data.s,
-        fortune_text: data.ft
-      }, true);
-    } else if (params.has('c')) {
-      const data = decodeShareData(params.get('c'));
-      renderGunghapResult({
-        title: data.t,
-        features: (data.f || []).map((x) => ({ part: x.p, emoji: x.e, text: x.x })),
-        compatibility_score: data.s,
-        summary: data.sm
-      }, { name: data.pa }, { name: data.pb });
-    } else if (params.has('u')) {
-      const data = decodeShareData(params.get('u'));
-      renderSajuResult({
-        title: data.t,
-        features: (data.f || []).map((x) => ({ part: x.p, emoji: x.e, text: x.x })),
-        fortune_score: data.s,
-        fortune_text: data.ft
-      }, { name: data.pn });
-    }
-  } catch (err) {
-    // 링크가 손상됐거나(구버전 링크 등) 해석 불가하면 조용히 홈 화면 유지
-  }
-}
-
-checkSharedLinkAndRender();
-window.addEventListener('hashchange', checkSharedLinkAndRender);
 
 // ============================================================
 // 결과 화면 공용: 공유 URL 상태 + 하단 액션(공유/다시하기/처음으로/기능전환)
@@ -472,3 +419,66 @@ analyzeSajuBtn.addEventListener('click', async () => {
     showError(err.message, 'saju-form-view');
   }
 });
+
+// ============================================================
+// 공유된 링크로 접속한 경우, 결과를 바로 표시 (요청사항 #2 연계:
+// 이 경우에도 상단바로 홈 이동 + 결과 화면 하단 스위치 칩으로 다른 기능 이동 가능)
+//
+// [2026-08-26 버그 수정 1] 해시(#u=...) 방식으로 바꾼 뒤, "이미 같은 탭에서 이 사이트가
+// 열려있는 상태에서 해시만 다른 링크로 이동"하는 경우(주소창에 붙여넣기, 카톡
+// 인앱 브라우저가 기존 웹뷰를 재사용하는 경우 등) 브라우저가 "같은 문서 내
+// 이동(same-document navigation)"으로 처리해서 페이지를 새로 안 불러오고, 그 결과
+// 우리 스크립트도 재실행이 안 돼서 결과가 아예 안 보이는 문제가 있었음.
+// hashchange 이벤트를 별도로 감지해서 그 경우에도 다시 파싱/렌더링하도록
+// 함수를 재사용 가능한 형태로 분리함.
+//
+// [2026-08-26 버그 수정 2] 이 블록을 파일 "위쪽"(resultCtx, renderGwansangResult 등이
+// 아직 선언되기 전)에 두고 즉시 호출하면, renderGwansangResult() 내부에서 참조하는
+// `let resultCtx = ...`가 아직 초기화 전이라 TDZ(Temporal Dead Zone) ReferenceError가
+// 발생함. 이 에러가 바로 아래 try/catch에 조용히 삼켜지면서 "완전히 새 탭에서 공유
+// 링크로 처음 들어가면 결과가 전혀 안 보이고, 앱 안에서 화면 전환을 한 번 더 거치면
+// (그때는 이미 스크립트가 다 실행돼 resultCtx가 초기화된 뒤라) 되던" 버그의 원인이었음.
+// → 이 블록을 resultCtx/wireResultActions/render*Result가 전부 선언된 파일 맨 끝으로
+// 이동해서 해결. (자바스크립트에서 `let`/`const`는 함수 선언과 달리 호이스팅되어도
+// 실제 그 줄이 실행되기 전까지는 접근할 수 없다는 점이 원인이었음)
+// ============================================================
+function checkSharedLinkAndRender() {
+  // 해시(#r=...) 우선 확인 (신규 방식). 구버전에 뿌려진 링크(?r=...)도 하위호환으로 계속 읽어줌.
+  const rawHash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const hashParams = new URLSearchParams(rawHash);
+  const searchParams = new URLSearchParams(window.location.search);
+  const hasHashData = hashParams.has('r') || hashParams.has('c') || hashParams.has('u');
+  const params = hasHashData ? hashParams : searchParams;
+  try {
+    if (params.has('r')) {
+      const data = decodeShareData(params.get('r'));
+      renderGwansangResult({
+        title: data.t,
+        features: (data.f || []).map((x) => ({ part: x.p, emoji: x.e, text: x.x })),
+        fortune_score: data.s,
+        fortune_text: data.ft
+      }, true);
+    } else if (params.has('c')) {
+      const data = decodeShareData(params.get('c'));
+      renderGunghapResult({
+        title: data.t,
+        features: (data.f || []).map((x) => ({ part: x.p, emoji: x.e, text: x.x })),
+        compatibility_score: data.s,
+        summary: data.sm
+      }, { name: data.pa }, { name: data.pb });
+    } else if (params.has('u')) {
+      const data = decodeShareData(params.get('u'));
+      renderSajuResult({
+        title: data.t,
+        features: (data.f || []).map((x) => ({ part: x.p, emoji: x.e, text: x.x })),
+        fortune_score: data.s,
+        fortune_text: data.ft
+      }, { name: data.pn });
+    }
+  } catch (err) {
+    // 링크가 손상됐거나(구버전 링크 등) 해석 불가하면 조용히 홈 화면 유지
+  }
+}
+
+checkSharedLinkAndRender();
+window.addEventListener('hashchange', checkSharedLinkAndRender);
