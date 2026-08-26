@@ -19,6 +19,18 @@
 <!-- 결과 공유 링크를 짧게 만들기 위한 압축 라이브러리 (서버 저장 없이 URL에 데이터를 담기 위함) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 
+<!-- 카카오톡 인앱 브라우저에서도 정식 공유 카드를 띄우기 위한 SDK -->
+<!-- 사용 전 반드시 아래 두 가지를 해야 함:
+     1) developers.kakao.com 에서 앱 생성(무료) → [앱] > [플랫폼 키] > [JavaScript 키] 복사
+     2) [앱] > [플랫폼] > [Web]에 실제 배포 도메인(예: https://ai-gwansang-one.vercel.app) 등록
+     그 다음 아래 'YOUR_KAKAO_JS_KEY' 부분을 발급받은 JavaScript 키로 교체할 것 -->
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
+<script>
+  if (window.Kakao && !Kakao.isInitialized()) {
+    Kakao.init('YOUR_KAKAO_JS_KEY');
+  }
+</script>
+
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Gowun+Batang:wght@400;700&display=swap');
 
@@ -726,15 +738,43 @@ analyzeBtn.addEventListener('click', async () => {
   }
 });
 
-document.getElementById('share-btn').addEventListener('click', async () => {
-  const shareData = { url: currentGwansangShareUrl };
-  try {
-    if (navigator.share) await navigator.share(shareData);
-    else {
-      await navigator.clipboard.writeText(shareData.url);
-      alert('링크가 복사되었습니다! 친구에게 붙여넣기 해보세요.');
+// ===================== 통합 공유 함수 (일반 브라우저 → 카톡 인앱 → 클립보드 순으로 폴백) =====================
+async function shareResult({ title, description, imageUrl, url }) {
+  // 1순위: 일반 브라우저(사파리/크롬)의 OS 공유시트. 카톡 인앱 브라우저에는 이 기능 자체가 없음
+  if (navigator.share) {
+    try {
+      await navigator.share({ url });
+      return;
+    } catch (err) {
+      return; // 사용자가 공유를 취소한 경우도 여기로 옴 — 추가 폴백 시도 안 함
     }
+  }
+  // 2순위: 카카오 SDK로 정식 카톡 공유 카드 띄우기 (카톡 인앱 브라우저에서 주로 여기로 옴)
+  if (window.Kakao && Kakao.isInitialized()) {
+    try {
+      Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: { title, description, imageUrl, link: { mobileWebUrl: url, webUrl: url } }
+      });
+      return;
+    } catch (err) {
+      // 카카오 SDK 실패 시 아래 클립보드 폴백으로 이어짐
+    }
+  }
+  // 3순위: 클립보드 복사 (최종 안전장치)
+  try {
+    await navigator.clipboard.writeText(url);
+    alert('링크가 복사되었습니다! 친구에게 붙여넣기 해보세요.');
   } catch (err) {}
+}
+
+document.getElementById('share-btn').addEventListener('click', () => {
+  shareResult({
+    title: document.getElementById('result-title').textContent || 'AI 관상소',
+    description: '내 관상 결과는? 재미로 보는 AI 관상소 🔮',
+    imageUrl: 'https://ai-gwansang-one.vercel.app/og-image.png',
+    url: currentGwansangShareUrl
+  });
 });
 
 document.getElementById('retry-btn').addEventListener('click', () => {
@@ -864,15 +904,13 @@ analyzeCoupleBtn.addEventListener('click', async () => {
   }
 });
 
-document.getElementById('couple-share-btn').addEventListener('click', async () => {
-  const shareData = { url: currentGunghapShareUrl };
-  try {
-    if (navigator.share) await navigator.share(shareData);
-    else {
-      await navigator.clipboard.writeText(shareData.url);
-      alert('링크가 복사되었습니다! 친구에게 붙여넣기 해보세요.');
-    }
-  } catch (err) {}
+document.getElementById('couple-share-btn').addEventListener('click', () => {
+  shareResult({
+    title: document.getElementById('couple-result-title').textContent || 'AI 관상소',
+    description: '우리 사주 궁합은 몇 점일까? 재미로 보는 AI 관상소 💕',
+    imageUrl: 'https://ai-gwansang-one.vercel.app/og-image.png',
+    url: currentGunghapShareUrl
+  });
 });
 
 document.getElementById('couple-retry-btn').addEventListener('click', () => {
