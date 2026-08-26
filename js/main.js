@@ -57,6 +57,11 @@ const TYPE_CONFIG = {
   }
 };
 
+// 결과 화면 상태(공유 URL 등) — render*Result 함수들이 최상단 실행 시점에도 안전하게
+// 참조할 수 있도록 파일 앞쪽에 선언 (아래쪽에 두면 TDZ 문제로 공유링크 최초 진입 시
+// 렌더링이 조용히 실패하는 버그가 있었음 — 2026-08-26 이력 참고)
+let resultCtx = { type: null, shareUrl: window.location.href };
+
 let loadingInterval = null;
 function startLoading(type) {
   const el = document.getElementById('loading-txt');
@@ -104,21 +109,29 @@ document.querySelectorAll('[data-back="home"]').forEach((el) => {
 });
 
 // 최초 진입 화면을 히스토리에 기록 (뒤로가기 매핑의 기준점)
-// 해시(#r=...)는 반드시 유지해야 함 — 지우면 파일 맨 끝의 checkSharedLinkAndRender()가 공유 데이터를 못 읽음
+// 해시(#r=...)는 반드시 유지해야 함 — 지우면 아래 checkSharedLinkAndRender()가 공유 데이터를 못 읽음
 history.replaceState({ view: 'home-view' }, '', window.location.pathname + window.location.search + window.location.hash);
-showView('home-view', false);
+
+// [2026-08-26] 무조건 홈 화면부터 그린 뒤 나중에 공유 결과로 바꿔치기하면, 그 사이
+// 짧게라도 홈 화면이 눈에 보이는 깜빡임이 생김. 공유 링크 여부를 먼저 확인해서
+// 성공하면 바로 결과 화면으로, 아니면 홈 화면으로 — 한 번에 맞는 화면만 그리도록 함.
+// (checkSharedLinkAndRender는 함수 선언이라 파일 아래쪽에 있어도 호이스팅으로 여기서
+// 바로 호출 가능하지만, resultCtx는 let이라 반드시 위쪽에서 먼저 선언돼 있어야 함)
+const renderedFromShareLink = checkSharedLinkAndRender();
+if (!renderedFromShareLink) {
+  showView('home-view', false);
+}
 
 // 모바일/브라우저 뒤로가기 → 화면 전환으로 매핑 (기존엔 히스토리가 안 쌓여서 뒤로가기 누르면 앱이 바로 종료됐음)
 window.addEventListener('popstate', (e) => {
   const view = e.state?.view || 'home-view';
   showView(view, false);
 });
+window.addEventListener('hashchange', checkSharedLinkAndRender);
 
 // ============================================================
 // 결과 화면 공용: 공유 URL 상태 + 하단 액션(공유/다시하기/처음으로/기능전환)
 // ============================================================
-let resultCtx = { type: null, shareUrl: window.location.href };
-
 function wireResultActions() {
   document.getElementById('share-btn').onclick = () => {
     const cfg = TYPE_CONFIG[resultCtx.type];
@@ -424,23 +437,17 @@ analyzeSajuBtn.addEventListener('click', async () => {
 // 공유된 링크로 접속한 경우, 결과를 바로 표시 (요청사항 #2 연계:
 // 이 경우에도 상단바로 홈 이동 + 결과 화면 하단 스위치 칩으로 다른 기능 이동 가능)
 //
-// [2026-08-26 버그 수정 1] 해시(#u=...) 방식으로 바꾼 뒤, "이미 같은 탭에서 이 사이트가
-// 열려있는 상태에서 해시만 다른 링크로 이동"하는 경우(주소창에 붙여넣기, 카톡
-// 인앱 브라우저가 기존 웹뷰를 재사용하는 경우 등) 브라우저가 "같은 문서 내
-// 이동(same-document navigation)"으로 처리해서 페이지를 새로 안 불러오고, 그 결과
-// 우리 스크립트도 재실행이 안 돼서 결과가 아예 안 보이는 문제가 있었음.
-// hashchange 이벤트를 별도로 감지해서 그 경우에도 다시 파싱/렌더링하도록
-// 함수를 재사용 가능한 형태로 분리함.
+// 함수 선언(function ... {})이라 호이스팅되므로, 실제 정의 위치는 파일 아래쪽이어도
+// 파일 위쪽(약 110번째 줄 근처)의 최초 실행 흐름에서 바로 호출 가능함.
+// 성공적으로 렌더링했으면 true, 공유 데이터가 없거나 해석 실패하면 false를 반환 —
+// 호출부에서 이 값을 보고 "실패 시에만 홈 화면 표시"하도록 분기함 (깜빡임 방지).
 //
-// [2026-08-26 버그 수정 2] 이 블록을 파일 "위쪽"(resultCtx, renderGwansangResult 등이
-// 아직 선언되기 전)에 두고 즉시 호출하면, renderGwansangResult() 내부에서 참조하는
-// `let resultCtx = ...`가 아직 초기화 전이라 TDZ(Temporal Dead Zone) ReferenceError가
-// 발생함. 이 에러가 바로 아래 try/catch에 조용히 삼켜지면서 "완전히 새 탭에서 공유
-// 링크로 처음 들어가면 결과가 전혀 안 보이고, 앱 안에서 화면 전환을 한 번 더 거치면
-// (그때는 이미 스크립트가 다 실행돼 resultCtx가 초기화된 뒤라) 되던" 버그의 원인이었음.
-// → 이 블록을 resultCtx/wireResultActions/render*Result가 전부 선언된 파일 맨 끝으로
-// 이동해서 해결. (자바스크립트에서 `let`/`const`는 함수 선언과 달리 호이스팅되어도
-// 실제 그 줄이 실행되기 전까지는 접근할 수 없다는 점이 원인이었음)
+// [2026-08-26 버그 수정] 처음엔 이 블록이 파일 위쪽, resultCtx가 선언되기 전에
+// 있어서 renderGwansangResult() 내부의 `resultCtx.type = ...`가 TDZ(Temporal Dead
+// Zone) ReferenceError를 던졌고, 이게 바로 아래 try/catch에 조용히 삼켜지면서
+// "완전히 새 탭에서 공유 링크로 처음 들어가면 결과가 전혀 안 보이는" 버그가 있었음.
+// resultCtx 선언을 파일 위쪽으로 옮겨서 해결 (checkSharedLinkAndRender 자체는
+// 함수 선언이라 원래도 호이스팅 문제는 없었음).
 // ============================================================
 function checkSharedLinkAndRender() {
   // 해시(#r=...) 우선 확인 (신규 방식). 구버전에 뿌려진 링크(?r=...)도 하위호환으로 계속 읽어줌.
@@ -458,6 +465,7 @@ function checkSharedLinkAndRender() {
         fortune_score: data.s,
         fortune_text: data.ft
       }, true);
+      return true;
     } else if (params.has('c')) {
       const data = decodeShareData(params.get('c'));
       renderGunghapResult({
@@ -466,6 +474,7 @@ function checkSharedLinkAndRender() {
         compatibility_score: data.s,
         summary: data.sm
       }, { name: data.pa }, { name: data.pb });
+      return true;
     } else if (params.has('u')) {
       const data = decodeShareData(params.get('u'));
       renderSajuResult({
@@ -474,11 +483,10 @@ function checkSharedLinkAndRender() {
         fortune_score: data.s,
         fortune_text: data.ft
       }, { name: data.pn });
+      return true;
     }
   } catch (err) {
     // 링크가 손상됐거나(구버전 링크 등) 해석 불가하면 조용히 홈 화면 유지
   }
+  return false;
 }
-
-checkSharedLinkAndRender();
-window.addEventListener('hashchange', checkSharedLinkAndRender);
